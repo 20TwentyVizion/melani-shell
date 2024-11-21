@@ -49,8 +49,10 @@
 
 .dynamic-bg {
   @apply fixed inset-0 -z-10 transition-opacity duration-700;
+  background-image: url('https://images.unsplash.com/photo-1582562124811-c09040d0a901?auto=format&fit=crop&w=1920&q=80');
   background-size: cover;
   background-position: center;
+  opacity: 0.15;
 }
 
 .dynamic-bg.morning {
@@ -67,4 +69,36 @@
 
 .dynamic-bg.night {
   background: linear-gradient(to bottom right, #0a0a0a, #1a1a1a);
+}
+
+.movable-window {
+  @apply fixed bg-black/30 backdrop-blur-lg border border-white/10 rounded-lg shadow-xl;
+  min-width: 300px;
+  min-height: 200px;
+}
+
+.window-header {
+  @apply flex items-center justify-between p-2 border-b border-white/10 cursor-move;
+}
+
+.window-controls {
+  @apply flex items-center space-x-2;
+}
+
+.window-control-button {
+  @apply w-3 h-3 rounded-full transition-colors;
+}
+
+.minimize-button {
+  @apply bg-yellow-500 hover:bg-yellow-600;
+}
+
+.close-button {
+  @apply bg-red-500 hover:bg-red-600;
+}
+
+.desktop-icon {
+  @apply fixed flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all;
+  width: 80px;
+  height: 80px;
 }
