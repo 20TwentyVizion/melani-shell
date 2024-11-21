@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Wifi, Battery, Bell, Sun, Moon, Settings } from 'lucide-react';
+import { Wifi, Battery, Bell, Sun, Moon } from 'lucide-react';
 
 interface SystemBarProps {
   onSettingsClick: () => void;
@@ -29,10 +29,6 @@ const SystemBar = ({ onSettingsClick }: SystemBarProps) => {
           <Wifi className="w-4 h-4" />
           <Battery className="w-4 h-4" />
           <Bell className="w-4 h-4" />
-          <Settings 
-            className="w-4 h-4 cursor-pointer hover:text-white/80 transition-colors"
-            onClick={onSettingsClick}
-          />
         </div>
         <div className="text-sm font-medium">
           {time.toLocaleTimeString()} • {time.toLocaleDateString()}

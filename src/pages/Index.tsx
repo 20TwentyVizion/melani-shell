@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import SystemBar from '@/components/SystemBar';
 import Dock from '@/components/Dock';
-import SystemStats from '@/components/dashboard/SystemStats';
-import RecentApps from '@/components/dashboard/RecentApps';
 import MelaniAssistant from '@/components/assistant/MelaniAssistant';
 import MovableWindow from '@/components/MovableWindow';
-import { Bot, AppWindow, Settings } from 'lucide-react';
+import FileExplorer from '@/components/FileExplorer';
+import { Bot, AppWindow } from 'lucide-react';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
   const [showMelani, setShowMelani] = useState(false);
   const [showRecentApps, setShowRecentApps] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFiles, setShowFiles] = useState(false);
 
   useEffect(() => {
     const updateTimeOfDay = () => {
@@ -88,7 +88,21 @@ const Index = () => {
         </MovableWindow>
       )}
 
-      <Dock />
+      {showFiles && (
+        <MovableWindow
+          title="File Explorer"
+          initialPosition={{ x: 200, y: 150 }}
+          onMinimize={() => setShowFiles(false)}
+          onClose={() => setShowFiles(false)}
+        >
+          <FileExplorer />
+        </MovableWindow>
+      )}
+
+      <Dock 
+        onSettingsClick={() => setShowSettings(true)}
+        onFilesClick={() => setShowFiles(true)}
+      />
     </div>
   );
 };
