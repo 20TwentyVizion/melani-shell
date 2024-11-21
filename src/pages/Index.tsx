@@ -4,6 +4,8 @@ import Dock from '@/components/Dock';
 import MelaniAssistant from '@/components/assistant/MelaniAssistant';
 import MovableWindow from '@/components/MovableWindow';
 import FileExplorer from '@/components/FileExplorer';
+import SystemStats from '@/components/dashboard/SystemStats';
+import RecentApps from '@/components/dashboard/RecentApps';
 import { Bot, AppWindow } from 'lucide-react';
 
 const Index = () => {
