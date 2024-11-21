@@ -9,8 +9,8 @@ import { Bot, AppWindow, Settings } from 'lucide-react';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
-  const [showMelani, setShowMelani] = useState(true);
-  const [showRecentApps, setShowRecentApps] = useState(true);
+  const [showMelani, setShowMelani] = useState(false);
+  const [showRecentApps, setShowRecentApps] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
@@ -38,27 +38,23 @@ const Index = () => {
       <SystemBar onSettingsClick={() => setShowSettings(true)} />
       
       {/* Desktop Icons */}
-      {!showMelani && (
-        <div 
-          className="desktop-icon"
-          style={{ left: '20px', top: '40px' }}
-          onClick={() => setShowMelani(true)}
-        >
-          <Bot className="w-8 h-8 text-white/80" />
-          <span className="text-xs mt-2">Melani</span>
-        </div>
-      )}
+      <div 
+        className="desktop-icon"
+        style={{ left: '20px', top: '40px' }}
+        onClick={() => setShowMelani(true)}
+      >
+        <Bot className="w-8 h-8 text-white/80" />
+        <span className="text-xs mt-2">Melani</span>
+      </div>
       
-      {!showRecentApps && (
-        <div 
-          className="desktop-icon"
-          style={{ left: '20px', top: '140px' }}
-          onClick={() => setShowRecentApps(true)}
-        >
-          <AppWindow className="w-8 h-8 text-white/80" />
-          <span className="text-xs mt-2">Recent</span>
-        </div>
-      )}
+      <div 
+        className="desktop-icon"
+        style={{ left: '20px', top: '140px' }}
+        onClick={() => setShowRecentApps(true)}
+      >
+        <AppWindow className="w-8 h-8 text-white/80" />
+        <span className="text-xs mt-2">Recent</span>
+      </div>
 
       {/* Movable Windows */}
       {showMelani && (

@@ -34,7 +34,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans transition-colors duration-700;
+    @apply text-foreground font-sans transition-colors duration-700;
     font-family: 'Inter', sans-serif;
   }
 }
@@ -49,26 +49,10 @@
 
 .dynamic-bg {
   @apply fixed inset-0 -z-10 transition-opacity duration-700;
-  background-image: url('https://images.unsplash.com/photo-1582562124811-c09040d0a901?auto=format&fit=crop&w=1920&q=80');
+  background-image: url('https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_3.jpg');
   background-size: cover;
   background-position: center;
-  opacity: 0.15;
-}
-
-.dynamic-bg.morning {
-  background: linear-gradient(to bottom right, #1a1a1a, #2d2d2d);
-}
-
-.dynamic-bg.afternoon {
-  background: linear-gradient(to bottom right, #2d2d2d, #404040);
-}
-
-.dynamic-bg.evening {
-  background: linear-gradient(to bottom right, #1a1a1a, #262626);
-}
-
-.dynamic-bg.night {
-  background: linear-gradient(to bottom right, #0a0a0a, #1a1a1a);
+  opacity: 1;
 }
 
 .movable-window {
