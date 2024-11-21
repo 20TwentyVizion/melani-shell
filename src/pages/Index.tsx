@@ -5,7 +5,7 @@ import SystemStats from '@/components/dashboard/SystemStats';
 import RecentApps from '@/components/dashboard/RecentApps';
 import MelaniAssistant from '@/components/assistant/MelaniAssistant';
 import MovableWindow from '@/components/MovableWindow';
-import { Bot, Apps, Settings } from 'lucide-react';
+import { Bot, AppWindow, Settings } from 'lucide-react';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -55,7 +55,7 @@ const Index = () => {
           style={{ left: '20px', top: '140px' }}
           onClick={() => setShowRecentApps(true)}
         >
-          <Apps className="w-8 h-8 text-white/80" />
+          <AppWindow className="w-8 h-8 text-white/80" />
           <span className="text-xs mt-2">Recent</span>
         </div>
       )}
