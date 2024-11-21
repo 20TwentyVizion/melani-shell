@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Cpu, Memory, Activity, Clock } from "lucide-react";
+import { Cpu, Database, Activity, Clock } from "lucide-react";
 
 const SystemStats = () => {
   return (
@@ -21,7 +21,7 @@ const SystemStats = () => {
           <CardTitle className="text-sm font-medium text-neon-magenta">
             Memory
           </CardTitle>
-          <Memory className="h-4 w-4 text-neon-magenta" />
+          <Database className="h-4 w-4 text-neon-magenta" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-neon-magenta">8.2 GB</div>
