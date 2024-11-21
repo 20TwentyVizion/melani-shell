@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Send, Bot } from "lucide-react";
 
 const MelaniAssistant = () => {
   const [input, setInput] = useState("");
@@ -16,7 +16,6 @@ const MelaniAssistant = () => {
     setMessages([...messages, { text: input, isUser: true }]);
     setInput("");
     
-    // Placeholder response (replace with actual API integration)
     setTimeout(() => {
       setMessages(prev => [...prev, {
         text: "I'm still being configured. Please try again later!",
@@ -26,22 +25,23 @@ const MelaniAssistant = () => {
   };
 
   return (
-    <Card className="glass-effect h-[500px] flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-lg text-neon-cyan">Melani Assistant</CardTitle>
+    <Card className="glass-effect h-[calc(100vh-8rem)] flex flex-col animate-fade-in">
+      <CardHeader className="flex flex-row items-center space-x-2">
+        <Bot className="w-5 h-5" />
+        <CardTitle className="text-lg">Melani Assistant</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
               <div
                 className={`rounded-lg px-4 py-2 max-w-[80%] ${
                   message.isUser
-                    ? 'bg-neon-cyan/20 text-white'
-                    : 'bg-neon-magenta/20 text-white'
+                    ? 'bg-white/10 text-white'
+                    : 'bg-black/30 text-white'
                 }`}
               >
                 {message.text}
@@ -59,7 +59,7 @@ const MelaniAssistant = () => {
           />
           <Button
             onClick={handleSend}
-            className="bg-neon-cyan/20 hover:bg-neon-cyan/30"
+            className="bg-white/10 hover:bg-white/20"
           >
             <Send className="h-4 w-4" />
           </Button>

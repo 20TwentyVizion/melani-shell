@@ -12,8 +12,8 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 10% 3.9%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
@@ -25,7 +25,7 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 }
 
@@ -34,15 +34,37 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans transition-colors duration-700;
     font-family: 'Inter', sans-serif;
   }
 }
 
 .glass-effect {
-  @apply bg-secondary/30 backdrop-blur-lg border border-white/10;
+  @apply bg-black/30 backdrop-blur-lg border border-white/10;
 }
 
 .dock-item {
   @apply transition-all duration-200 ease-in-out hover:animate-dock-hover;
+}
+
+.dynamic-bg {
+  @apply fixed inset-0 -z-10 transition-opacity duration-700;
+  background-size: cover;
+  background-position: center;
+}
+
+.dynamic-bg.morning {
+  background: linear-gradient(to bottom right, #1a1a1a, #2d2d2d);
+}
+
+.dynamic-bg.afternoon {
+  background: linear-gradient(to bottom right, #2d2d2d, #404040);
+}
+
+.dynamic-bg.evening {
+  background: linear-gradient(to bottom right, #1a1a1a, #262626);
+}
+
+.dynamic-bg.night {
+  background: linear-gradient(to bottom right, #0a0a0a, #1a1a1a);
 }
