@@ -8,7 +8,15 @@ import SystemStats from '@/components/dashboard/SystemStats';
 import RecentApps from '@/components/dashboard/RecentApps';
 import Profile from '@/components/profile/Profile';
 import Games from '@/components/games/Games';
-import { Bot, AppWindow, UserRound, Gamepad2 } from 'lucide-react';
+import TextEditor from '@/components/TextEditor';
+import { Bot, AppWindow, UserRound, Gamepad2, FileText } from 'lucide-react';
+
+const WALLPAPERS = [
+  'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_3.jpg',
+  'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_2.jpg',
+  'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_1.jpg',
+  'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_0.jpg'
+];
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -18,6 +26,8 @@ const Index = () => {
   const [showFiles, setShowFiles] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showGames, setShowGames] = useState(false);
+  const [showTextEditor, setShowTextEditor] = useState(false);
+  const [currentWallpaper, setCurrentWallpaper] = useState(0);
 
   useEffect(() => {
     const updateTimeOfDay = () => {
@@ -38,9 +48,30 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const wallpaperInterval = setInterval(() => {
+      setCurrentWallpaper((prev) => (prev + 1) % WALLPAPERS.length);
+    }, 12000);
+
+    return () => clearInterval(wallpaperInterval);
+  }, []);
+
+  const calculateCenterPosition = () => {
+    return {
+      x: Math.max(0, (window.innerWidth - 600) / 2),
+      y: Math.max(0, (window.innerHeight - 400) / 2)
+    };
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
-      <div className={`dynamic-bg ${timeOfDay}`} />
+      <div 
+        className="dynamic-bg"
+        style={{ 
+          backgroundImage: `url(${WALLPAPERS[currentWallpaper]})`,
+          transition: 'opacity 1s ease-in-out'
+        }} 
+      />
       <SystemBar onSettingsClick={() => setShowSettings(true)} />
       
       {/* Desktop Icons */}
@@ -80,11 +111,20 @@ const Index = () => {
         <span className="text-xs mt-2">Games</span>
       </div>
 
+      <div 
+        className="desktop-icon"
+        style={{ left: '20px', top: '440px' }}
+        onClick={() => setShowTextEditor(true)}
+      >
+        <FileText className="w-8 h-8 text-white/80" />
+        <span className="text-xs mt-2">Text Editor</span>
+      </div>
+
       {/* Movable Windows */}
       {showMelani && (
         <MovableWindow
           title="Melani Assistant"
-          initialPosition={{ x: 100, y: 100 }}
+          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowMelani(false)}
         >
           <MelaniAssistant />
@@ -94,7 +134,7 @@ const Index = () => {
       {showRecentApps && (
         <MovableWindow
           title="Recent Applications"
-          initialPosition={{ x: 500, y: 100 }}
+          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowRecentApps(false)}
         >
           <RecentApps />
@@ -104,7 +144,7 @@ const Index = () => {
       {showSettings && (
         <MovableWindow
           title="System Settings"
-          initialPosition={{ x: 300, y: 200 }}
+          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowSettings(false)}
           onClose={() => setShowSettings(false)}
         >
@@ -115,7 +155,7 @@ const Index = () => {
       {showFiles && (
         <MovableWindow
           title="File Explorer"
-          initialPosition={{ x: 200, y: 150 }}
+          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowFiles(false)}
           onClose={() => setShowFiles(false)}
         >
@@ -126,7 +166,7 @@ const Index = () => {
       {showProfile && (
         <MovableWindow
           title="User Profile"
-          initialPosition={{ x: 400, y: 150 }}
+          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowProfile(false)}
           onClose={() => setShowProfile(false)}
         >
@@ -137,11 +177,22 @@ const Index = () => {
       {showGames && (
         <MovableWindow
           title="Games"
-          initialPosition={{ x: 300, y: 150 }}
+          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowGames(false)}
           onClose={() => setShowGames(false)}
         >
           <Games />
+        </MovableWindow>
+      )}
+
+      {showTextEditor && (
+        <MovableWindow
+          title="Text Editor"
+          initialPosition={calculateCenterPosition()}
+          onMinimize={() => setShowTextEditor(false)}
+          onClose={() => setShowTextEditor(false)}
+        >
+          <TextEditor />
         </MovableWindow>
       )}
 

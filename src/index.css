@@ -48,8 +48,7 @@
 }
 
 .dynamic-bg {
-  @apply fixed inset-0 -z-10 transition-opacity duration-700;
-  background-image: url('https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_3.jpg');
+  @apply fixed inset-0 -z-10;
   background-size: cover;
   background-position: center;
   opacity: 1;
