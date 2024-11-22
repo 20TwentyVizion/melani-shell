@@ -18,6 +18,17 @@ const WALLPAPERS = [
   'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_0.jpg'
 ];
 
+// Let's split the desktop icons into a separate component
+const DesktopIcon = ({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) => (
+  <div 
+    className="desktop-icon cursor-pointer flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 transition-colors"
+    onClick={onClick}
+  >
+    <Icon className="w-8 h-8 text-white/80" />
+    <span className="text-xs mt-2 text-white/80">{label}</span>
+  </div>
+);
+
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
   const [showMelani, setShowMelani] = useState(false);
@@ -27,20 +38,18 @@ const Index = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [showGames, setShowGames] = useState(false);
   const [showTextEditor, setShowTextEditor] = useState(false);
-  const [currentWallpaper, setCurrentWallpaper] = useState(0);
+  const [currentWallpaper] = useState(() => {
+    const randomIndex = Math.floor(Math.random() * WALLPAPERS.length);
+    return WALLPAPERS[randomIndex];
+  });
 
   useEffect(() => {
     const updateTimeOfDay = () => {
       const hour = new Date().getHours();
-      if (hour >= 5 && hour < 12) {
-        setTimeOfDay('morning');
-      } else if (hour >= 12 && hour < 17) {
-        setTimeOfDay('afternoon');
-      } else if (hour >= 17 && hour < 20) {
-        setTimeOfDay('evening');
-      } else {
-        setTimeOfDay('night');
-      }
+      if (hour >= 5 && hour < 12) setTimeOfDay('morning');
+      else if (hour >= 12 && hour < 17) setTimeOfDay('afternoon');
+      else if (hour >= 17 && hour < 20) setTimeOfDay('evening');
+      else setTimeOfDay('night');
     };
 
     updateTimeOfDay();
@@ -48,79 +57,40 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const wallpaperInterval = setInterval(() => {
-      setCurrentWallpaper((prev) => (prev + 1) % WALLPAPERS.length);
-    }, 12000);
+  const calculateCenterPosition = () => ({
+    x: Math.max(0, (window.innerWidth - 600) / 2),
+    y: Math.max(0, (window.innerHeight - 400) / 2)
+  });
 
-    return () => clearInterval(wallpaperInterval);
-  }, []);
-
-  const calculateCenterPosition = () => {
-    return {
-      x: Math.max(0, (window.innerWidth - 600) / 2),
-      y: Math.max(0, (window.innerHeight - 400) / 2)
-    };
-  };
+  const desktopIcons = [
+    { icon: Bot, label: 'Melani', onClick: () => setShowMelani(true) },
+    { icon: AppWindow, label: 'Recent', onClick: () => setShowRecentApps(true) },
+    { icon: UserRound, label: 'Profile', onClick: () => setShowProfile(true) },
+    { icon: Gamepad2, label: 'Games', onClick: () => setShowGames(true) },
+    { icon: FileText, label: 'Text Editor', onClick: () => setShowTextEditor(true) },
+  ];
 
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div 
-        className="dynamic-bg"
+        className="dynamic-bg absolute inset-0 bg-cover bg-center"
         style={{ 
-          backgroundImage: `url(${WALLPAPERS[currentWallpaper]})`,
-          transition: 'opacity 1s ease-in-out'
+          backgroundImage: `url(${currentWallpaper})`,
         }} 
       />
       <SystemBar onSettingsClick={() => setShowSettings(true)} />
       
-      {/* Desktop Icons */}
-      <div 
-        className="desktop-icon"
-        style={{ left: '20px', top: '40px' }}
-        onClick={() => setShowMelani(true)}
-      >
-        <Bot className="w-8 h-8 text-white/80" />
-        <span className="text-xs mt-2">Melani</span>
-      </div>
-      
-      <div 
-        className="desktop-icon"
-        style={{ left: '20px', top: '140px' }}
-        onClick={() => setShowRecentApps(true)}
-      >
-        <AppWindow className="w-8 h-8 text-white/80" />
-        <span className="text-xs mt-2">Recent</span>
+      <div className="fixed left-4 top-12 space-y-8">
+        {desktopIcons.map((icon, index) => (
+          <DesktopIcon
+            key={index}
+            icon={icon.icon}
+            label={icon.label}
+            onClick={icon.onClick}
+          />
+        ))}
       </div>
 
-      <div 
-        className="desktop-icon"
-        style={{ left: '20px', top: '240px' }}
-        onClick={() => setShowProfile(true)}
-      >
-        <UserRound className="w-8 h-8 text-white/80" />
-        <span className="text-xs mt-2">Profile</span>
-      </div>
-
-      <div 
-        className="desktop-icon"
-        style={{ left: '20px', top: '340px' }}
-        onClick={() => setShowGames(true)}
-      >
-        <Gamepad2 className="w-8 h-8 text-white/80" />
-        <span className="text-xs mt-2">Games</span>
-      </div>
-
-      <div 
-        className="desktop-icon"
-        style={{ left: '20px', top: '440px' }}
-        onClick={() => setShowTextEditor(true)}
-      >
-        <FileText className="w-8 h-8 text-white/80" />
-        <span className="text-xs mt-2">Text Editor</span>
-      </div>
-
-      {/* Movable Windows */}
       {showMelani && (
         <MovableWindow
           title="Melani Assistant"
