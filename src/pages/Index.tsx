@@ -7,7 +7,8 @@ import FileExplorer from '@/components/FileExplorer';
 import SystemStats from '@/components/dashboard/SystemStats';
 import RecentApps from '@/components/dashboard/RecentApps';
 import Profile from '@/components/profile/Profile';
-import { Bot, AppWindow, UserRound } from 'lucide-react';
+import Games from '@/components/games/Games';
+import { Bot, AppWindow, UserRound, Gamepad2 } from 'lucide-react';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -16,6 +17,7 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showGames, setShowGames] = useState(false);
 
   useEffect(() => {
     const updateTimeOfDay = () => {
@@ -69,6 +71,15 @@ const Index = () => {
         <span className="text-xs mt-2">Profile</span>
       </div>
 
+      <div 
+        className="desktop-icon"
+        style={{ left: '20px', top: '340px' }}
+        onClick={() => setShowGames(true)}
+      >
+        <Gamepad2 className="w-8 h-8 text-white/80" />
+        <span className="text-xs mt-2">Games</span>
+      </div>
+
       {/* Movable Windows */}
       {showMelani && (
         <MovableWindow
@@ -120,6 +131,17 @@ const Index = () => {
           onClose={() => setShowProfile(false)}
         >
           <Profile />
+        </MovableWindow>
+      )}
+
+      {showGames && (
+        <MovableWindow
+          title="Games"
+          initialPosition={{ x: 300, y: 150 }}
+          onMinimize={() => setShowGames(false)}
+          onClose={() => setShowGames(false)}
+        >
+          <Games />
         </MovableWindow>
       )}
 
