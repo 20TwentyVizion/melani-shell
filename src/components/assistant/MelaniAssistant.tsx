@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Bot } from "lucide-react";
+import { useSystemMemory } from "@/lib/systemMemory";
 
 const MelaniAssistant = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean }>>([
     { text: "Hello! I'm Melani, your personal assistant. How can I help you today?", isUser: false },
   ]);
+  
+  const { addProcess, removeProcess } = useSystemMemory();
+
+  useEffect(() => {
+    // Register Melani as a process
+    addProcess("Melani Assistant", 256); // Allocate 256MB
+    
+    return () => {
+      removeProcess("melani-assistant");
+    };
+  }, []);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -16,11 +28,15 @@ const MelaniAssistant = () => {
     setMessages([...messages, { text: input, isUser: true }]);
     setInput("");
     
+    // Simulate memory usage for each message
+    addProcess(`Message Processing`, 1);
+    
     setTimeout(() => {
       setMessages(prev => [...prev, {
         text: "I'm still being configured. Please try again later!",
         isUser: false
       }]);
+      removeProcess(`Message Processing`);
     }, 1000);
   };
 
