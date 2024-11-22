@@ -26,17 +26,11 @@ interface DesktopIconProps {
 }
 
 const DesktopIcon = ({ icon: Icon, label, onClick, top }: DesktopIconProps) => {
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClick();
-  };
-
   return (
     <div 
       className="fixed left-4 flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all"
       style={{ top: `${top + 48}px` }}
-      onClick={handleClick}
+      onClick={onClick}
     >
       <Icon className="w-8 h-8 text-white/80" />
       <span className="text-xs mt-2 text-white/80">{label}</span>
