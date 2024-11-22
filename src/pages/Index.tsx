@@ -18,16 +18,31 @@ const WALLPAPERS = [
   'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_0.jpg'
 ];
 
-const DesktopIcon = ({ icon: Icon, label, onClick, top }: { icon: any; label: string; onClick: () => void; top: number }) => (
-  <div 
-    className="fixed left-4 flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all"
-    style={{ top: `${top + 48}px` }}
-    onClick={onClick}
-  >
-    <Icon className="w-8 h-8 text-white/80" />
-    <span className="text-xs mt-2 text-white/80">{label}</span>
-  </div>
-);
+interface DesktopIconProps {
+  icon: any;
+  label: string;
+  onClick: () => void;
+  top: number;
+}
+
+const DesktopIcon = ({ icon: Icon, label, onClick, top }: DesktopIconProps) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick();
+  };
+
+  return (
+    <div 
+      className="fixed left-4 flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all"
+      style={{ top: `${top + 48}px` }}
+      onClick={handleClick}
+    >
+      <Icon className="w-8 h-8 text-white/80" />
+      <span className="text-xs mt-2 text-white/80">{label}</span>
+    </div>
+  );
+};
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -89,6 +104,7 @@ const Index = () => {
         <MovableWindow
           title="Melani Assistant"
           onMinimize={() => setShowMelani(false)}
+          onClose={() => setShowMelani(false)}
         >
           <MelaniAssistant />
         </MovableWindow>
@@ -98,6 +114,7 @@ const Index = () => {
         <MovableWindow
           title="Recent Applications"
           onMinimize={() => setShowRecentApps(false)}
+          onClose={() => setShowRecentApps(false)}
         >
           <RecentApps />
         </MovableWindow>
