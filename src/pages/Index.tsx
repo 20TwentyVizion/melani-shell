@@ -26,11 +26,18 @@ interface DesktopIconProps {
 }
 
 const DesktopIcon = ({ icon: Icon, label, onClick, top }: DesktopIconProps) => {
+  const handleClick = (e: React.MouseEvent) => {
+    console.log(`Clicking desktop icon: ${label}`);
+    e.preventDefault();
+    e.stopPropagation();
+    onClick();
+  };
+
   return (
     <div 
       className="fixed left-4 flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all"
       style={{ top: `${top + 48}px` }}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <Icon className="w-8 h-8 text-white/80" />
       <span className="text-xs mt-2 text-white/80">{label}</span>
@@ -66,12 +73,37 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleIconClick = (windowName: string, setShowFn: (show: boolean) => void) => {
+    console.log(`Opening window: ${windowName}`);
+    setShowFn(true);
+  };
+
   const desktopIcons = [
-    { icon: Bot, label: 'Melani', onClick: () => setShowMelani(true) },
-    { icon: AppWindow, label: 'Recent', onClick: () => setShowRecentApps(true) },
-    { icon: UserRound, label: 'Profile', onClick: () => setShowProfile(true) },
-    { icon: Gamepad2, label: 'Games', onClick: () => setShowGames(true) },
-    { icon: FileText, label: 'Text Editor', onClick: () => setShowTextEditor(true) },
+    { 
+      icon: Bot, 
+      label: 'Melani', 
+      onClick: () => handleIconClick('Melani', setShowMelani)
+    },
+    { 
+      icon: AppWindow, 
+      label: 'Recent', 
+      onClick: () => handleIconClick('Recent', setShowRecentApps)
+    },
+    { 
+      icon: UserRound, 
+      label: 'Profile', 
+      onClick: () => handleIconClick('Profile', setShowProfile)
+    },
+    { 
+      icon: Gamepad2, 
+      label: 'Games', 
+      onClick: () => handleIconClick('Games', setShowGames)
+    },
+    { 
+      icon: FileText, 
+      label: 'Text Editor', 
+      onClick: () => handleIconClick('Text Editor', setShowTextEditor)
+    },
   ];
 
   return (
@@ -82,7 +114,7 @@ const Index = () => {
           backgroundImage: `url(${currentWallpaper})`,
         }} 
       />
-      <SystemBar onSettingsClick={() => setShowSettings(true)} />
+      <SystemBar onSettingsClick={() => handleIconClick('Settings', setShowSettings)} />
       
       {desktopIcons.map((icon, index) => (
         <DesktopIcon
@@ -165,8 +197,8 @@ const Index = () => {
       )}
 
       <Dock 
-        onSettingsClick={() => setShowSettings(true)}
-        onFilesClick={() => setShowFiles(true)}
+        onSettingsClick={() => handleIconClick('Settings', setShowSettings)}
+        onFilesClick={() => handleIconClick('Files', setShowFiles)}
       />
     </div>
   );
