@@ -18,10 +18,10 @@ const WALLPAPERS = [
   'https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_0.jpg'
 ];
 
-// Let's split the desktop icons into a separate component
-const DesktopIcon = ({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) => (
+const DesktopIcon = ({ icon: Icon, label, onClick, top }: { icon: any; label: string; onClick: () => void; top: number }) => (
   <div 
-    className="desktop-icon cursor-pointer flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 transition-colors"
+    className="desktop-icon"
+    style={{ top: `${top}px` }}
     onClick={onClick}
   >
     <Icon className="w-8 h-8 text-white/80" />
@@ -57,11 +57,6 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const calculateCenterPosition = () => ({
-    x: Math.max(0, (window.innerWidth - 600) / 2),
-    y: Math.max(0, (window.innerHeight - 400) / 2)
-  });
-
   const desktopIcons = [
     { icon: Bot, label: 'Melani', onClick: () => setShowMelani(true) },
     { icon: AppWindow, label: 'Recent', onClick: () => setShowRecentApps(true) },
@@ -73,20 +68,21 @@ const Index = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div 
-        className="dynamic-bg absolute inset-0 bg-cover bg-center"
+        className="dynamic-bg"
         style={{ 
           backgroundImage: `url(${currentWallpaper})`,
         }} 
       />
       <SystemBar onSettingsClick={() => setShowSettings(true)} />
       
-      <div className="fixed left-4 top-12 space-y-8">
+      <div className="fixed left-4 top-12">
         {desktopIcons.map((icon, index) => (
           <DesktopIcon
             key={index}
             icon={icon.icon}
             label={icon.label}
             onClick={icon.onClick}
+            top={index * 100}
           />
         ))}
       </div>
@@ -94,7 +90,6 @@ const Index = () => {
       {showMelani && (
         <MovableWindow
           title="Melani Assistant"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowMelani(false)}
         >
           <MelaniAssistant />
@@ -104,7 +99,6 @@ const Index = () => {
       {showRecentApps && (
         <MovableWindow
           title="Recent Applications"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowRecentApps(false)}
         >
           <RecentApps />
@@ -114,7 +108,6 @@ const Index = () => {
       {showSettings && (
         <MovableWindow
           title="System Settings"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowSettings(false)}
           onClose={() => setShowSettings(false)}
         >
@@ -125,7 +118,6 @@ const Index = () => {
       {showFiles && (
         <MovableWindow
           title="File Explorer"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowFiles(false)}
           onClose={() => setShowFiles(false)}
         >
@@ -136,7 +128,6 @@ const Index = () => {
       {showProfile && (
         <MovableWindow
           title="User Profile"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowProfile(false)}
           onClose={() => setShowProfile(false)}
         >
@@ -147,7 +138,6 @@ const Index = () => {
       {showGames && (
         <MovableWindow
           title="Games"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowGames(false)}
           onClose={() => setShowGames(false)}
         >
@@ -158,7 +148,6 @@ const Index = () => {
       {showTextEditor && (
         <MovableWindow
           title="Text Editor"
-          initialPosition={calculateCenterPosition()}
           onMinimize={() => setShowTextEditor(false)}
           onClose={() => setShowTextEditor(false)}
         >
