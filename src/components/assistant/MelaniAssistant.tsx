@@ -4,40 +4,64 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Bot } from "lucide-react";
 import { useSystemMemory } from "@/lib/systemMemory";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const MelaniAssistant = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean }>>([
-    { text: "Hello! I'm Melani, your personal assistant. How can I help you today?", isUser: false },
+    { text: "Hey there! I'm Melani. What's on your mind?", isUser: false },
   ]);
-  
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini-api-key') || '');
   const { addProcess, removeProcess } = useSystemMemory();
 
   useEffect(() => {
-    // Register Melani as a process
-    addProcess("Melani Assistant", 256); // Allocate 256MB
-    
-    return () => {
-      removeProcess("melani-assistant");
-    };
+    addProcess("Melani Assistant", 256);
+    return () => removeProcess("Melani Assistant");
   }, []);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const getProfile = () => {
+    const saved = localStorage.getItem('melani-profile');
+    return saved ? JSON.parse(saved) : null;
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || !apiKey) return;
     
-    setMessages([...messages, { text: input, isUser: true }]);
+    const userMessage = input.trim();
+    setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
     setInput("");
     
-    // Simulate memory usage for each message
-    addProcess(`Message Processing`, 1);
-    
-    setTimeout(() => {
+    try {
+      addProcess("Message Processing", 64);
+      
+      const profile = getProfile();
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+      const prompt = `
+        You are Melani, a casual and slightly snarky AI assistant. Keep responses conversational and brief (1-2 lines) unless a detailed explanation is needed.
+        User's name: ${profile?.name || 'Unknown'}
+        User's interests: ${profile?.interests?.join(', ') || 'Unknown'}
+        
+        Previous context: ${messages.slice(-3).map(m => `${m.isUser ? 'User' : 'Melani'}: ${m.text}`).join('\n')}
+        
+        User's message: ${userMessage}
+        
+        Respond naturally without directly mentioning the user's profile information unless relevant to the conversation.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response.text();
+      
+      setMessages(prev => [...prev, { text: response, isUser: false }]);
+    } catch (error) {
       setMessages(prev => [...prev, {
-        text: "I'm still being configured. Please try again later!",
+        text: "Oops, something went wrong. Mind trying again?",
         isUser: false
       }]);
-      removeProcess(`Message Processing`);
-    }, 1000);
+    } finally {
+      removeProcess("Message Processing");
+    }
   };
 
   return (

@@ -6,7 +6,8 @@ import MovableWindow from '@/components/MovableWindow';
 import FileExplorer from '@/components/FileExplorer';
 import SystemStats from '@/components/dashboard/SystemStats';
 import RecentApps from '@/components/dashboard/RecentApps';
-import { Bot, AppWindow } from 'lucide-react';
+import Profile from '@/components/profile/Profile';
+import { Bot, AppWindow, UserRound } from 'lucide-react';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -14,6 +15,7 @@ const Index = () => {
   const [showRecentApps, setShowRecentApps] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     const updateTimeOfDay = () => {
@@ -58,6 +60,15 @@ const Index = () => {
         <span className="text-xs mt-2">Recent</span>
       </div>
 
+      <div 
+        className="desktop-icon"
+        style={{ left: '20px', top: '240px' }}
+        onClick={() => setShowProfile(true)}
+      >
+        <UserRound className="w-8 h-8 text-white/80" />
+        <span className="text-xs mt-2">Profile</span>
+      </div>
+
       {/* Movable Windows */}
       {showMelani && (
         <MovableWindow
@@ -98,6 +109,17 @@ const Index = () => {
           onClose={() => setShowFiles(false)}
         >
           <FileExplorer />
+        </MovableWindow>
+      )}
+
+      {showProfile && (
+        <MovableWindow
+          title="User Profile"
+          initialPosition={{ x: 400, y: 150 }}
+          onMinimize={() => setShowProfile(false)}
+          onClose={() => setShowProfile(false)}
+        >
+          <Profile />
         </MovableWindow>
       )}
 
