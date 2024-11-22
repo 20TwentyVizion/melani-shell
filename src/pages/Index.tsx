@@ -20,8 +20,8 @@ const WALLPAPERS = [
 
 const DesktopIcon = ({ icon: Icon, label, onClick, top }: { icon: any; label: string; onClick: () => void; top: number }) => (
   <div 
-    className="desktop-icon"
-    style={{ top: `${top}px` }}
+    className="fixed left-4 flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all"
+    style={{ top: `${top + 48}px` }}
     onClick={onClick}
   >
     <Icon className="w-8 h-8 text-white/80" />
@@ -75,17 +75,15 @@ const Index = () => {
       />
       <SystemBar onSettingsClick={() => setShowSettings(true)} />
       
-      <div className="fixed left-4 top-12">
-        {desktopIcons.map((icon, index) => (
-          <DesktopIcon
-            key={index}
-            icon={icon.icon}
-            label={icon.label}
-            onClick={icon.onClick}
-            top={index * 100}
-          />
-        ))}
-      </div>
+      {desktopIcons.map((icon, index) => (
+        <DesktopIcon
+          key={index}
+          icon={icon.icon}
+          label={icon.label}
+          onClick={icon.onClick}
+          top={index * 80}
+        />
+      ))}
 
       {showMelani && (
         <MovableWindow
