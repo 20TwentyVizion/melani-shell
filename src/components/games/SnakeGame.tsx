@@ -15,28 +15,41 @@ const SnakeGame = () => {
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
 
-  const generateFood = () => {
-    const newFood = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE)
-    };
-    return newFood;
-  };
+  const generateFood = () => ({
+    x: Math.floor(Math.random() * GRID_SIZE),
+    y: Math.floor(Math.random() * GRID_SIZE)
+  });
 
-  const resetGame = () => {
+  const startGame = () => {
     setSnake(INITIAL_SNAKE);
     setDirection(INITIAL_DIRECTION);
     setFood(generateFood());
     setGameOver(false);
     setScore(0);
     setIsPaused(false);
+    setIsStarted(true);
+  };
+
+  const resetGame = () => {
+    setIsStarted(false);
+    setGameOver(false);
+    setScore(0);
   };
 
   const drawGame = (context: CanvasRenderingContext2D) => {
     // Clear canvas
     context.fillStyle = 'rgba(0, 0, 0, 0.3)';
     context.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+
+    if (!isStarted) {
+      context.fillStyle = '#fff';
+      context.font = '20px Arial';
+      context.textAlign = 'center';
+      context.fillText('Press Start to Play', (GRID_SIZE * CELL_SIZE) / 2, (GRID_SIZE * CELL_SIZE) / 2);
+      return;
+    }
 
     // Draw snake
     context.fillStyle = '#00fff2';
@@ -60,7 +73,7 @@ const SnakeGame = () => {
   };
 
   const updateGame = () => {
-    if (gameOver || isPaused) return;
+    if (gameOver || isPaused || !isStarted) return;
 
     const newHead = {
       x: (snake[0].x + direction.x + GRID_SIZE) % GRID_SIZE,
@@ -102,7 +115,7 @@ const SnakeGame = () => {
     draw();
 
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (gameOver) return;
+      if (!isStarted || gameOver) return;
 
       const keyDirections: { [key: string]: { x: number; y: number } } = {
         ArrowUp: { x: 0, y: -1 },
@@ -133,35 +146,44 @@ const SnakeGame = () => {
       clearInterval(gameLoop);
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [direction, gameOver, isPaused]);
+  }, [direction, gameOver, isPaused, isStarted]);
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="flex items-center justify-between w-full mb-2">
-        <span className="text-lg">Score: {score}</span>
-        <Button
-          variant="outline"
-          onClick={() => setIsPaused(prev => !prev)}
-          className="ml-4"
-        >
-          {isPaused ? 'Resume' : 'Pause'}
-        </Button>
-      </div>
+      {isStarted && (
+        <div className="flex items-center justify-between w-full mb-2">
+          <span className="text-lg">Score: {score}</span>
+          <Button
+            variant="outline"
+            onClick={() => setIsPaused(prev => !prev)}
+            className="ml-4"
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </Button>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         width={GRID_SIZE * CELL_SIZE}
         height={GRID_SIZE * CELL_SIZE}
         className="border border-white/10 rounded-lg"
       />
+      {!isStarted && !gameOver && (
+        <Button onClick={startGame} className="mt-4">
+          Start Game
+        </Button>
+      )}
       {gameOver && (
         <div className="text-center">
           <h3 className="text-xl mb-2">Game Over!</h3>
           <Button onClick={resetGame}>Play Again</Button>
         </div>
       )}
-      <div className="text-sm text-gray-400 mt-4">
-        Use arrow keys to move • Space to pause
-      </div>
+      {isStarted && (
+        <div className="text-sm text-gray-400 mt-4">
+          Use arrow keys to move • Space to pause
+        </div>
+      )}
     </div>
   );
 };
