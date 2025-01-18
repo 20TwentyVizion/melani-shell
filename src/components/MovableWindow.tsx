@@ -9,24 +9,11 @@ interface MovableWindowProps {
   onClose?: () => void;
 }
 
-const MovableWindow = ({ title, children, initialPosition, onMinimize, onClose }: MovableWindowProps) => {
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+const MovableWindow = ({ title, children, initialPosition = { x: 100, y: 100 }, onMinimize, onClose }: MovableWindowProps) => {
+  const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!position && windowRef.current) {
-      const rect = windowRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      const centerX = Math.max(0, (viewportWidth - rect.width) / 2);
-      const centerY = Math.max(0, (viewportHeight - rect.height) / 2);
-      
-      setPosition(initialPosition || { x: centerX, y: centerY });
-    }
-  }, [initialPosition, position]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (windowRef.current) {
@@ -63,8 +50,6 @@ const MovableWindow = ({ title, children, initialPosition, onMinimize, onClose }
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragOffset]);
-
-  if (!position) return null;
 
   return (
     <div
