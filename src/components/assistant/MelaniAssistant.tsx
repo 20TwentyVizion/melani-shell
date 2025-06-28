@@ -1,10 +1,11 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, Download } from "lucide-react";
+import { Send, Bot, Download, Mic, MicOff, Volume2 } from "lucide-react";
 import { useSystemMemory } from "@/lib/systemMemory";
+import { useVoiceSettings } from "@/lib/voiceSettings";
+import { VoiceService, VoiceState } from "@/lib/voiceService";
 import * as webllm from "@mlc-ai/web-llm";
 
 const MelaniAssistant = () => {
@@ -15,8 +16,12 @@ const MelaniAssistant = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState("");
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  
   const engineRef = useRef<webllm.MLCEngineInterface | null>(null);
+  const voiceServiceRef = useRef<VoiceService | null>(null);
   const { addProcess, removeProcess } = useSystemMemory();
+  const { voiceInputEnabled, voiceOutputEnabled, selectedVoice } = useVoiceSettings();
 
   useEffect(() => {
     addProcess("Melani Assistant", 256);
@@ -25,6 +30,30 @@ const MelaniAssistant = () => {
 
   useEffect(() => {
     initializeModel();
+  }, []);
+
+  useEffect(() => {
+    if (!voiceServiceRef.current) {
+      voiceServiceRef.current = new VoiceService();
+      
+      voiceServiceRef.current.onStateChange((state) => {
+        setVoiceState(state);
+      });
+
+      voiceServiceRef.current.onTranscript((transcript) => {
+        if (transcript.trim()) {
+          setInput(transcript);
+          handleSend(transcript);
+        }
+      });
+    }
+
+    return () => {
+      if (voiceServiceRef.current) {
+        voiceServiceRef.current.stopListening();
+        voiceServiceRef.current.stopSpeaking();
+      }
+    };
   }, []);
 
   const initializeModel = async () => {
@@ -69,10 +98,10 @@ const MelaniAssistant = () => {
     return saved ? JSON.parse(saved) : null;
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || !isModelLoaded || !engineRef.current) return;
+  const handleSend = async (messageText?: string) => {
+    const userMessage = messageText || input.trim();
+    if (!userMessage || !isModelLoaded || !engineRef.current) return;
     
-    const userMessage = input.trim();
     setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
     setInput("");
     setIsLoading(true);
@@ -101,6 +130,11 @@ Respond naturally without directly mentioning the user's profile information unl
       const response = completion.choices[0]?.message?.content || "Sorry, I didn't catch that. Mind trying again?";
       
       setMessages(prev => [...prev, { text: response, isUser: false }]);
+      
+      // Speak the response if voice output is enabled
+      if (voiceOutputEnabled && voiceServiceRef.current) {
+        voiceServiceRef.current.speak(response, selectedVoice);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       setMessages(prev => [...prev, {
@@ -113,6 +147,38 @@ Respond naturally without directly mentioning the user's profile information unl
     }
   };
 
+  const handleVoiceToggle = () => {
+    if (!voiceServiceRef.current || !voiceInputEnabled) return;
+
+    if (voiceState === 'idle') {
+      voiceServiceRef.current.startListening();
+    } else if (voiceState === 'listening') {
+      voiceServiceRef.current.stopListening();
+    }
+  };
+
+  const getVoiceIcon = () => {
+    if (!voiceInputEnabled) return MicOff;
+    if (voiceState === 'listening') return Volume2;
+    return Mic;
+  };
+
+  const getVoiceButtonClass = () => {
+    let baseClass = "bg-white/10 hover:bg-white/20 transition-all duration-200";
+    
+    if (voiceState === 'listening') {
+      baseClass += " animate-pulse bg-blue-500/30 hover:bg-blue-500/40";
+    } else if (voiceState === 'speaking') {
+      baseClass += " bg-green-500/30 hover:bg-green-500/40";
+    } else if (voiceState === 'processing') {
+      baseClass += " bg-yellow-500/30 hover:bg-yellow-500/40";
+    }
+    
+    return baseClass;
+  };
+
+  const VoiceIcon = getVoiceIcon();
+
   return (
     <Card className="glass-effect h-[calc(100vh-8rem)] flex flex-col animate-fade-in">
       <CardHeader className="flex flex-row items-center space-x-2">
@@ -120,6 +186,9 @@ Respond naturally without directly mentioning the user's profile information unl
         <CardTitle className="text-lg">Melani Assistant</CardTitle>
         {!isModelLoaded && (
           <Download className="w-4 h-4 animate-bounce" />
+        )}
+        {voiceState === 'speaking' && (
+          <Volume2 className="w-4 h-4 animate-pulse text-green-400" />
         )}
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
@@ -163,15 +232,35 @@ Respond naturally without directly mentioning the user's profile information unl
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isModelLoaded ? "Type your message..." : "Loading model..."}
+            placeholder={
+              voiceState === 'listening' ? "Listening..." :
+              voiceState === 'processing' ? "Processing..." :
+              isModelLoaded ? "Type your message..." : "Loading model..."
+            }
             className="glass-effect"
-            disabled={!isModelLoaded || isLoading}
+            disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
           />
+          
+          {voiceInputEnabled && voiceServiceRef.current?.isSupported() && (
+            <Button
+              onClick={handleVoiceToggle}
+              className={getVoiceButtonClass()}
+              disabled={!isModelLoaded || isLoading}
+              title={
+                voiceState === 'listening' ? "Stop listening" :
+                voiceState === 'processing' ? "Processing..." :
+                "Start voice input"
+              }
+            >
+              <VoiceIcon className="h-4 w-4" />
+            </Button>
+          )}
+          
           <Button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             className="bg-white/10 hover:bg-white/20"
-            disabled={!isModelLoaded || isLoading}
+            disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
           >
             <Send className="h-4 w-4" />
           </Button>
