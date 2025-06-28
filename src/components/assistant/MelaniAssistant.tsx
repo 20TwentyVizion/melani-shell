@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Send, Bot, Download, Mic, MicOff, Volume2 } from "lucide-react";
 import { useSystemMemory } from "@/lib/systemMemory";
 import { useVoiceSettings } from "@/lib/voiceSettings";
+import { useLLMSettings } from "@/lib/llmSettings";
 import { VoiceService, VoiceState } from "@/lib/voiceService";
-import * as webllm from "@mlc-ai/web-llm";
+import { LLMClient } from "@/lib/llmClient";
 
 const MelaniAssistant = () => {
   const [input, setInput] = useState("");
@@ -18,10 +20,11 @@ const MelaniAssistant = () => {
   const [loadingProgress, setLoadingProgress] = useState("");
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   
-  const engineRef = useRef<webllm.MLCEngineInterface | null>(null);
+  const llmClientRef = useRef<LLMClient | null>(null);
   const voiceServiceRef = useRef<VoiceService | null>(null);
   const { addProcess, removeProcess } = useSystemMemory();
   const { voiceInputEnabled, voiceOutputEnabled, selectedVoice } = useVoiceSettings();
+  const { provider, geminiApiKey, ollamaUrl, ollamaModel } = useLLMSettings();
 
   useEffect(() => {
     addProcess("Melani Assistant", 256);
@@ -29,8 +32,8 @@ const MelaniAssistant = () => {
   }, []);
 
   useEffect(() => {
-    initializeModel();
-  }, []);
+    initializeLLM();
+  }, [provider, geminiApiKey, ollamaUrl, ollamaModel]);
 
   useEffect(() => {
     if (!voiceServiceRef.current) {
@@ -56,34 +59,49 @@ const MelaniAssistant = () => {
     };
   }, []);
 
-  const initializeModel = async () => {
+  const initializeLLM = async () => {
     try {
       setIsLoading(true);
+      setIsModelLoaded(false);
       addProcess("Model Loading", 512);
       
-      const initProgressCallback = (report: webllm.InitProgressReport) => {
-        setLoadingProgress(`${report.text} (${(report.progress * 100).toFixed(1)}%)`);
+      // Create new LLM client with current settings
+      llmClientRef.current = new LLMClient({
+        provider,
+        apiKey: geminiApiKey,
+        ollamaUrl,
+        model: ollamaModel,
+      });
+
+      const onProgress = (progress: string) => {
+        setLoadingProgress(progress);
       };
 
-      const engine = await webllm.CreateMLCEngine(
-        "TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC",
-        {
-          initProgressCallback,
-        }
-      );
-
-      engineRef.current = engine;
-      setIsModelLoaded(true);
-      setLoadingProgress("");
+      const success = await llmClientRef.current.initialize(onProgress);
       
-      // Update the welcome message
-      setMessages([
-        { text: "Hey there! I'm Melani, now running locally on your device. What's on your mind?", isUser: false },
-      ]);
+      if (success) {
+        setIsModelLoaded(true);
+        setLoadingProgress("");
+        
+        // Update the welcome message based on provider
+        const welcomeMessages = {
+          webllm: "Hey there! I'm Melani, now running locally on your device. What's on your mind?",
+          gemini: "Hey there! I'm Melani, powered by Google Gemini. What can I help you with?",
+          ollama: "Hey there! I'm Melani, running on your local Ollama instance. How can I assist you?"
+        };
+        
+        setMessages([
+          { text: welcomeMessages[provider], isUser: false },
+        ]);
+      } else {
+        setMessages([
+          { text: "Oops! I had trouble loading my brain. Check your settings and try again?", isUser: false },
+        ]);
+      }
       
       removeProcess("Model Loading");
     } catch (error) {
-      console.error("Failed to initialize WebLLM:", error);
+      console.error("Failed to initialize LLM:", error);
       setMessages([
         { text: "Oops! I had trouble loading my brain. Try refreshing the page?", isUser: false },
       ]);
@@ -100,7 +118,7 @@ const MelaniAssistant = () => {
 
   const handleSend = async (messageText?: string) => {
     const userMessage = messageText || input.trim();
-    if (!userMessage || !isModelLoaded || !engineRef.current) return;
+    if (!userMessage || !isModelLoaded || !llmClientRef.current) return;
     
     setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
     setInput("");
@@ -118,22 +136,21 @@ Previous context: ${messages.slice(-3).map(m => `${m.isUser ? 'User' : 'Melani'}
 
 Respond naturally without directly mentioning the user's profile information unless relevant to the conversation.`;
 
-      const completion = await engineRef.current.chat.completions.create({
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage }
-        ],
+      const response = await llmClientRef.current.chat([
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
+      ], {
         temperature: 0.7,
-        max_tokens: 150,
+        maxTokens: 150,
       });
 
-      const response = completion.choices[0]?.message?.content || "Sorry, I didn't catch that. Mind trying again?";
+      const responseText = response.content || response.error || "Sorry, I didn't catch that. Mind trying again?";
       
-      setMessages(prev => [...prev, { text: response, isUser: false }]);
+      setMessages(prev => [...prev, { text: responseText, isUser: false }]);
       
       // Speak the response if voice output is enabled
-      if (voiceOutputEnabled && voiceServiceRef.current) {
-        voiceServiceRef.current.speak(response, selectedVoice);
+      if (voiceOutputEnabled && voiceServiceRef.current && response.content) {
+        voiceServiceRef.current.speak(response.content, selectedVoice);
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -179,6 +196,15 @@ Respond naturally without directly mentioning the user's profile information unl
 
   const VoiceIcon = getVoiceIcon();
 
+  const getProviderDisplayName = () => {
+    switch (provider) {
+      case 'webllm': return 'TinyLlama-1.1B (Local)';
+      case 'gemini': return 'Google Gemini';
+      case 'ollama': return `Ollama (${ollamaModel})`;
+      default: return 'Unknown';
+    }
+  };
+
   return (
     <Card className="glass-effect h-[calc(100vh-8rem)] flex flex-col animate-fade-in">
       <CardHeader className="flex flex-row items-center space-x-2">
@@ -190,6 +216,9 @@ Respond naturally without directly mentioning the user's profile information unl
         {voiceState === 'speaking' && (
           <Volume2 className="w-4 h-4 animate-pulse text-green-400" />
         )}
+        <div className="text-xs text-gray-400 ml-auto">
+          {getProviderDisplayName()}
+        </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
         {!isModelLoaded && loadingProgress && (
