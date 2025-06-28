@@ -1,11 +1,19 @@
 
+// Add type declarations for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition?: typeof SpeechRecognition;
+    webkitSpeechRecognition?: typeof SpeechRecognition;
+  }
+}
+
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
 export class VoiceService {
   private recognition: any = null;
   private synthesis: SpeechSynthesis;
-  private onStateChange: (state: VoiceState) => void = () => {};
-  private onTranscript: (text: string) => void = () => {};
+  private stateChangeCallback: (state: VoiceState) => void = () => {};
+  private transcriptCallback: (text: string) => void = () => {};
   private currentState: VoiceState = 'idle';
 
   constructor() {
@@ -14,7 +22,7 @@ export class VoiceService {
   }
 
   private initSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
@@ -29,7 +37,7 @@ export class VoiceService {
       this.recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         this.setState('processing');
-        this.onTranscript(transcript);
+        this.transcriptCallback(transcript);
       };
 
       this.recognition.onend = () => {
@@ -47,7 +55,7 @@ export class VoiceService {
 
   private setState(state: VoiceState) {
     this.currentState = state;
-    this.onStateChange(state);
+    this.stateChangeCallback(state);
   }
 
   public startListening() {
@@ -108,15 +116,15 @@ export class VoiceService {
   }
 
   public isSupported(): boolean {
-    return !!(window.SpeechRecognition || (window as any).webkitSpeechRecognition) && !!window.speechSynthesis;
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition) && !!window.speechSynthesis;
   }
 
   public onStateChange(callback: (state: VoiceState) => void) {
-    this.onStateChange = callback;
+    this.stateChangeCallback = callback;
   }
 
   public onTranscript(callback: (text: string) => void) {
-    this.onTranscript = callback;
+    this.transcriptCallback = callback;
   }
 
   public getCurrentState(): VoiceState {
