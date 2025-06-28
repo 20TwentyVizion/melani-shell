@@ -1,42 +1,6 @@
 
-
 // Add type declarations for Web Speech API
 declare global {
-  interface SpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    start(): void;
-    stop(): void;
-    onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onend: ((this: SpeechRecognition, ev: Event) => void) | null;
-    onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-    onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
-  }
-
-  interface SpeechRecognitionEvent extends Event {
-    results: SpeechRecognitionResultList;
-  }
-
-  interface SpeechRecognitionErrorEvent extends Event {
-    error: string;
-  }
-
-  interface SpeechRecognitionResultList {
-    length: number;
-    [index: number]: SpeechRecognitionResult;
-  }
-
-  interface SpeechRecognitionResult {
-    length: number;
-    [index: number]: SpeechRecognitionAlternative;
-  }
-
-  interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
-  }
-
   interface Window {
     SpeechRecognition?: {
       new(): SpeechRecognition;
@@ -50,7 +14,7 @@ declare global {
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
 export class VoiceService {
-  private recognition: any = null;
+  private recognition: SpeechRecognition | null = null;
   private synthesis: SpeechSynthesis;
   private stateChangeCallback: (state: VoiceState) => void = () => {};
   private transcriptCallback: (text: string) => void = () => {};
@@ -74,7 +38,7 @@ export class VoiceService {
         this.setState('listening');
       };
 
-      this.recognition.onresult = (event: any) => {
+      this.recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         this.setState('processing');
         this.transcriptCallback(transcript);
@@ -86,7 +50,7 @@ export class VoiceService {
         }
       };
 
-      this.recognition.onerror = (event: any) => {
+      this.recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         this.setState('idle');
       };
