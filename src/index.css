@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -36,6 +37,10 @@
   body {
     @apply text-foreground font-sans transition-colors duration-700;
     font-family: 'Inter', sans-serif;
+    /* Prevent zoom on inputs on iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Prevent horizontal scrolling */
+    overflow-x: hidden;
   }
 }
 
@@ -57,12 +62,17 @@
 
 .movable-window {
   @apply fixed bg-black/30 backdrop-blur-lg border border-white/10 rounded-lg shadow-xl;
-  min-width: 300px;
+  min-width: 280px;
   min-height: 200px;
+  /* Mobile-friendly sizing */
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 80px);
 }
 
 .window-header {
   @apply flex items-center justify-between p-2 border-b border-white/10 cursor-move;
+  /* Touch-friendly header */
+  min-height: 44px;
 }
 
 .window-controls {
@@ -70,7 +80,10 @@
 }
 
 .window-control-button {
-  @apply w-3 h-3 rounded-full transition-colors;
+  @apply w-6 h-6 rounded-full transition-colors flex items-center justify-center;
+  /* Larger touch targets */
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .minimize-button {
@@ -85,4 +98,52 @@
   @apply fixed flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all;
   width: 80px;
   height: 80px;
+  /* Touch-friendly sizing */
+  min-width: 64px;
+  min-height: 64px;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .desktop-icon {
+    position: relative !important;
+    width: 100%;
+    height: auto;
+    padding: 16px;
+    margin: 8px 0;
+  }
+  
+  .movable-window {
+    position: fixed !important;
+    top: 60px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 80px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none;
+    max-height: none;
+  }
+  
+  .dock-item {
+    padding: 12px;
+  }
+}
+
+/* Game-specific mobile styles */
+.game-canvas {
+  max-width: 100%;
+  height: auto;
+  touch-action: manipulation;
+}
+
+.game-controls {
+  @apply flex flex-wrap gap-2 justify-center mt-4;
+}
+
+.game-control-btn {
+  @apply px-6 py-3 text-lg font-semibold rounded-lg glass-effect border border-white/20 transition-all;
+  min-width: 60px;
+  min-height: 60px;
+  touch-action: manipulation;
 }
