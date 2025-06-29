@@ -21,7 +21,7 @@ const SystemBar = ({ onSettingsClick }: SystemBarProps) => {
         <span className="text-sm font-medium">Melani OS</span>
       </div>
       <div className="text-sm font-medium">
-        {time.toLocaleTimeString()} • {time.toLocaleDateString()}
+        {time.toLocaleTimeString()} {time.toLocaleDateString()}
       </div>
     </div>
   );
