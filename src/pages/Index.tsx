@@ -1,16 +1,25 @@
+
 import { useEffect, useState } from 'react';
 import SystemBar from '@/components/SystemBar';
 import Dock from '@/components/Dock';
 import MelaniAssistant from '@/components/assistant/MelaniAssistant';
 import MovableWindow from '@/components/MovableWindow';
 import FileExplorer from '@/components/FileExplorer';
+import EnhancedFileExplorer from '@/components/files/EnhancedFileExplorer';
 import SystemStats from '@/components/dashboard/SystemStats';
+import SystemMonitor from '@/components/system/SystemMonitor';
 import RecentApps from '@/components/dashboard/RecentApps';
 import Profile from '@/components/profile/Profile';
 import Games from '@/components/games/Games';
 import CalendarApp from '@/components/Calendar';
 import MusicPlayer from '@/components/MusicPlayer';
-import { Bot, AppWindow, UserRound, Gamepad2 } from 'lucide-react';
+import NotesApp from '@/components/productivity/NotesApp';
+import Calculator from '@/components/productivity/Calculator';
+import TaskManager from '@/components/productivity/TaskManager';
+import SettingsPanel from '@/components/settings/SettingsPanel';
+import { Bot, AppWindow, UserRound, Gamepad2, FileText, Calculator as CalcIcon, CheckSquare } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -22,7 +31,14 @@ const Index = () => {
   const [showGames, setShowGames] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMusic, setShowMusic] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+  const [showSystemMonitor, setShowSystemMonitor] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const { currentTheme } = useTheme();
+  const { showInfo } = useNotification();
 
   useEffect(() => {
     const updateTimeOfDay = () => {
@@ -49,22 +65,33 @@ const Index = () => {
     const resizeListener = () => checkMobile();
     window.addEventListener('resize', resizeListener);
     
+    // Welcome notification
+    setTimeout(() => {
+      showInfo('Welcome to Melani OS', 'Your enhanced desktop experience is ready!');
+    }, 1000);
+    
     return () => {
       clearInterval(timeInterval);
       window.removeEventListener('resize', resizeListener);
     };
-  }, []);
+  }, [showInfo]);
 
   const desktopIcons = [
     { icon: Bot, label: 'Melani', onClick: () => setShowMelani(true) },
     { icon: AppWindow, label: 'Recent', onClick: () => setShowRecentApps(true) },
     { icon: UserRound, label: 'Profile', onClick: () => setShowProfile(true) },
     { icon: Gamepad2, label: 'Games', onClick: () => setShowGames(true) },
+    { icon: FileText, label: 'Notes', onClick: () => setShowNotes(true) },
+    { icon: CalcIcon, label: 'Calculator', onClick: () => setShowCalculator(true) },
+    { icon: CheckSquare, label: 'Tasks', onClick: () => setShowTasks(true) },
   ];
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      <div className={`dynamic-bg ${timeOfDay}`} />
+      <div 
+        className="fixed inset-0 -z-10 transition-opacity duration-700 bg-cover bg-center"
+        style={{ backgroundImage: `url(${currentTheme.wallpaper})` }}
+      />
       <SystemBar onSettingsClick={() => setShowSettings(true)} />
       
       {/* Desktop Icons - Mobile Responsive */}
@@ -85,41 +112,17 @@ const Index = () => {
         </div>
       ) : (
         <>
-          <div 
-            className="desktop-icon"
-            style={{ left: '20px', top: '40px' }}
-            onClick={() => setShowMelani(true)}
-          >
-            <Bot className="w-8 h-8 text-white/80" />
-            <span className="text-xs mt-2">Melani</span>
-          </div>
-          
-          <div 
-            className="desktop-icon"
-            style={{ left: '20px', top: '140px' }}
-            onClick={() => setShowRecentApps(true)}
-          >
-            <AppWindow className="w-8 h-8 text-white/80" />
-            <span className="text-xs mt-2">Recent</span>
-          </div>
-
-          <div 
-            className="desktop-icon"
-            style={{ left: '20px', top: '240px' }}
-            onClick={() => setShowProfile(true)}
-          >
-            <UserRound className="w-8 h-8 text-white/80" />
-            <span className="text-xs mt-2">Profile</span>
-          </div>
-
-          <div 
-            className="desktop-icon"
-            style={{ left: '20px', top: '340px' }}
-            onClick={() => setShowGames(true)}
-          >
-            <Gamepad2 className="w-8 h-8 text-white/80" />
-            <span className="text-xs mt-2">Games</span>
-          </div>
+          {desktopIcons.map((icon, index) => (
+            <div 
+              key={index}
+              className="desktop-icon"
+              style={{ left: '20px', top: `${40 + index * 100}px` }}
+              onClick={icon.onClick}
+            >
+              <icon.icon className="w-8 h-8 text-white/80" />
+              <span className="text-xs mt-2">{icon.label}</span>
+            </div>
+          ))}
         </>
       )}
 
@@ -154,7 +157,7 @@ const Index = () => {
           onClose={() => setShowSettings(false)}
           isMobile={isMobile}
         >
-          <SystemStats />
+          <SettingsPanel />
         </MovableWindow>
       )}
 
@@ -166,7 +169,7 @@ const Index = () => {
           onClose={() => setShowFiles(false)}
           isMobile={isMobile}
         >
-          <FileExplorer />
+          <EnhancedFileExplorer />
         </MovableWindow>
       )}
 
@@ -215,6 +218,54 @@ const Index = () => {
           isMobile={isMobile}
         >
           <MusicPlayer />
+        </MovableWindow>
+      )}
+
+      {showNotes && (
+        <MovableWindow
+          title="Notes"
+          initialPosition={{ x: isMobile ? 10 : 400, y: isMobile ? 60 : 100 }}
+          onMinimize={() => setShowNotes(false)}
+          onClose={() => setShowNotes(false)}
+          isMobile={isMobile}
+        >
+          <NotesApp />
+        </MovableWindow>
+      )}
+
+      {showCalculator && (
+        <MovableWindow
+          title="Calculator"
+          initialPosition={{ x: isMobile ? 10 : 450, y: isMobile ? 60 : 200 }}
+          onMinimize={() => setShowCalculator(false)}
+          onClose={() => setShowCalculator(false)}
+          isMobile={isMobile}
+        >
+          <Calculator />
+        </MovableWindow>
+      )}
+
+      {showTasks && (
+        <MovableWindow
+          title="Task Manager"
+          initialPosition={{ x: isMobile ? 10 : 500, y: isMobile ? 60 : 150 }}
+          onMinimize={() => setShowTasks(false)}
+          onClose={() => setShowTasks(false)}
+          isMobile={isMobile}
+        >
+          <TaskManager />
+        </MovableWindow>
+      )}
+
+      {showSystemMonitor && (
+        <MovableWindow
+          title="System Monitor"
+          initialPosition={{ x: isMobile ? 10 : 350, y: isMobile ? 60 : 100 }}
+          onMinimize={() => setShowSystemMonitor(false)}
+          onClose={() => setShowSystemMonitor(false)}
+          isMobile={isMobile}
+        >
+          <SystemMonitor />
         </MovableWindow>
       )}
 
