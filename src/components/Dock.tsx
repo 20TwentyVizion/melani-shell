@@ -1,4 +1,3 @@
-
 import { 
   Home, 
   Settings, 
@@ -13,6 +12,8 @@ import { TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui
 interface DockProps {
   onSettingsClick: () => void;
   onFilesClick: () => void;
+  onCalendarClick: () => void;
+  onMusicClick: () => void;
   isMobile?: boolean;
 }
 
@@ -41,13 +42,13 @@ const DockItem = ({ icon: Icon, label, onClick, isMobile }: { icon: any, label: 
   );
 };
 
-const Dock = ({ onSettingsClick, onFilesClick, isMobile = false }: DockProps) => {
+const Dock = ({ onSettingsClick, onFilesClick, onCalendarClick, onMusicClick, isMobile = false }: DockProps) => {
   const apps = [
     { icon: Home, label: 'Home' },
     { icon: FolderOpen, label: 'Files', onClick: onFilesClick },
     { icon: Mail, label: 'Mail' },
-    { icon: Calendar, label: 'Calendar' },
-    { icon: Music, label: 'Music' },
+    { icon: Calendar, label: 'Calendar', onClick: onCalendarClick },
+    { icon: Music, label: 'Music', onClick: onMusicClick },
     { icon: Settings, label: 'Settings', onClick: onSettingsClick },
   ];
 

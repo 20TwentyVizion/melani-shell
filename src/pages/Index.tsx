@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import SystemBar from '@/components/SystemBar';
 import Dock from '@/components/Dock';
@@ -9,6 +8,8 @@ import SystemStats from '@/components/dashboard/SystemStats';
 import RecentApps from '@/components/dashboard/RecentApps';
 import Profile from '@/components/profile/Profile';
 import Games from '@/components/games/Games';
+import CalendarApp from '@/components/Calendar';
+import MusicPlayer from '@/components/MusicPlayer';
 import { Bot, AppWindow, UserRound, Gamepad2 } from 'lucide-react';
 
 const Index = () => {
@@ -19,6 +20,8 @@ const Index = () => {
   const [showFiles, setShowFiles] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showGames, setShowGames] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showMusic, setShowMusic] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -191,9 +194,35 @@ const Index = () => {
         </MovableWindow>
       )}
 
+      {showCalendar && (
+        <MovableWindow
+          title="Calendar"
+          initialPosition={{ x: isMobile ? 10 : 250, y: isMobile ? 60 : 120 }}
+          onMinimize={() => setShowCalendar(false)}
+          onClose={() => setShowCalendar(false)}
+          isMobile={isMobile}
+        >
+          <CalendarApp />
+        </MovableWindow>
+      )}
+
+      {showMusic && (
+        <MovableWindow
+          title="Music Player"
+          initialPosition={{ x: isMobile ? 10 : 350, y: isMobile ? 60 : 140 }}
+          onMinimize={() => setShowMusic(false)}
+          onClose={() => setShowMusic(false)}
+          isMobile={isMobile}
+        >
+          <MusicPlayer />
+        </MovableWindow>
+      )}
+
       <Dock 
         onSettingsClick={() => setShowSettings(true)}
         onFilesClick={() => setShowFiles(true)}
+        onCalendarClick={() => setShowCalendar(true)}
+        onMusicClick={() => setShowMusic(true)}
         isMobile={isMobile}
       />
     </div>
