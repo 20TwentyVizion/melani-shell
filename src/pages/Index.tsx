@@ -17,9 +17,13 @@ import NotesApp from '@/components/productivity/NotesApp';
 import Calculator from '@/components/productivity/Calculator';
 import TaskManager from '@/components/productivity/TaskManager';
 import SettingsPanel from '@/components/settings/SettingsPanel';
-import { Bot, AppWindow, UserRound, Gamepad2, FileText, Calculator as CalcIcon, CheckSquare } from 'lucide-react';
+import GlobalSearch from '@/components/search/GlobalSearch';
+import AppStore from '@/components/marketplace/AppStore';
+import { Bot, AppWindow, UserRound, Gamepad2, FileText, Calculator as CalcIcon, CheckSquare, Search, Store } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useUser } from '@/contexts/UserContext';
+import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
@@ -35,10 +39,47 @@ const Index = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showTasks, setShowTasks] = useState(false);
   const [showSystemMonitor, setShowSystemMonitor] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showAppStore, setShowAppStore] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   const { currentTheme } = useTheme();
   const { showInfo } = useNotification();
+  const { currentUser } = useUser();
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: 'k',
+      ctrlKey: true,
+      action: () => setShowSearch(true),
+      description: 'Open global search'
+    },
+    {
+      key: 'n',
+      ctrlKey: true,
+      action: () => setShowNotes(true),
+      description: 'Open notes'
+    },
+    {
+      key: 'c',
+      ctrlKey: true,
+      shiftKey: true,
+      action: () => setShowCalculator(true),
+      description: 'Open calculator'
+    },
+    {
+      key: 'f',
+      ctrlKey: true,
+      action: () => setShowFiles(true),
+      description: 'Open file explorer'
+    },
+    {
+      key: 'Escape',
+      action: () => setShowSearch(false),
+      description: 'Close search'
+    }
+  ]);
 
   useEffect(() => {
     const updateTimeOfDay = () => {
@@ -67,14 +108,14 @@ const Index = () => {
     
     // Welcome notification
     setTimeout(() => {
-      showInfo('Welcome to Melani OS', 'Your enhanced desktop experience is ready!');
+      showInfo('Welcome to Melani OS', `Good ${timeOfDay}, ${currentUser?.name || 'User'}! Your enhanced desktop experience is ready!`);
     }, 1000);
     
     return () => {
       clearInterval(timeInterval);
       window.removeEventListener('resize', resizeListener);
     };
-  }, [showInfo]);
+  }, [showInfo, timeOfDay, currentUser]);
 
   const desktopIcons = [
     { icon: Bot, label: 'Melani', onClick: () => setShowMelani(true) },
@@ -84,6 +125,8 @@ const Index = () => {
     { icon: FileText, label: 'Notes', onClick: () => setShowNotes(true) },
     { icon: CalcIcon, label: 'Calculator', onClick: () => setShowCalculator(true) },
     { icon: CheckSquare, label: 'Tasks', onClick: () => setShowTasks(true) },
+    { icon: Search, label: 'Search', onClick: () => setShowSearch(true) },
+    { icon: Store, label: 'App Store', onClick: () => setShowAppStore(true) },
   ];
 
   return (
@@ -97,7 +140,7 @@ const Index = () => {
       {/* Desktop Icons - Mobile Responsive */}
       {isMobile ? (
         <div className="pt-12 pb-20 px-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             {desktopIcons.map((icon, index) => (
               <div
                 key={index}
@@ -116,7 +159,7 @@ const Index = () => {
             <div 
               key={index}
               className="desktop-icon"
-              style={{ left: '20px', top: `${40 + index * 100}px` }}
+              style={{ left: '20px', top: `${40 + index * 90}px` }}
               onClick={icon.onClick}
             >
               <icon.icon className="w-8 h-8 text-white/80" />
@@ -124,6 +167,11 @@ const Index = () => {
             </div>
           ))}
         </>
+      )}
+
+      {/* Global Search */}
+      {showSearch && (
+        <GlobalSearch onClose={() => setShowSearch(false)} />
       )}
 
       {/* Movable Windows */}
@@ -266,6 +314,18 @@ const Index = () => {
           isMobile={isMobile}
         >
           <SystemMonitor />
+        </MovableWindow>
+      )}
+
+      {showAppStore && (
+        <MovableWindow
+          title="App Store"
+          initialPosition={{ x: isMobile ? 10 : 200, y: isMobile ? 60 : 100 }}
+          onMinimize={() => setShowAppStore(false)}
+          onClose={() => setShowAppStore(false)}
+          isMobile={isMobile}
+        >
+          <AppStore />
         </MovableWindow>
       )}
 

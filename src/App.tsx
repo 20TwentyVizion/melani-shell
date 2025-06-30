@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { UserProvider } from "@/contexts/UserContext";
+import { WindowProvider } from "@/contexts/WindowContext";
 import Index from "./pages/Index";
 
 const queryClient = new QueryClient({
@@ -19,19 +21,23 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <NotificationProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </NotificationProvider>
-    </ThemeProvider>
+    <UserProvider>
+      <ThemeProvider>
+        <NotificationProvider>
+          <WindowProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </WindowProvider>
+        </NotificationProvider>
+      </ThemeProvider>
+    </UserProvider>
   </QueryClientProvider>
 );
 
