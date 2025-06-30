@@ -8,8 +8,8 @@ import Profile from '@/components/profile/Profile';
 import Games from '@/components/games/Games';
 import CalendarApp from '@/components/Calendar';
 import MusicPlayer from '@/components/MusicPlayer';
-import NotesApp from '@/components/productivity/NotesApp';
-import Calculator from '@/components/productivity/Calculator';
+import EnhancedNotesApp from '@/components/productivity/EnhancedNotesApp';
+import EnhancedCalculator from '@/components/productivity/EnhancedCalculator';
 import TaskManager from '@/components/productivity/TaskManager';
 import SystemMonitor from '@/components/system/SystemMonitor';
 import AppStore from '@/components/marketplace/AppStore';
@@ -139,7 +139,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow }: WindowManagerP
           onClose={() => onCloseWindow('notes')}
           isMobile={isMobile}
         >
-          <NotesApp />
+          <EnhancedNotesApp />
         </MovableWindow>
       )}
 
@@ -151,7 +151,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow }: WindowManagerP
           onClose={() => onCloseWindow('calculator')}
           isMobile={isMobile}
         >
-          <Calculator />
+          <EnhancedCalculator />
         </MovableWindow>
       )}
 

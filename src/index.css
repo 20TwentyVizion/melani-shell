@@ -62,17 +62,17 @@
 
 .movable-window {
   @apply fixed bg-black/30 backdrop-blur-lg border border-white/10 rounded-lg shadow-xl;
-  min-width: 280px;
-  min-height: 200px;
+  min-width: 320px;
+  min-height: 240px;
   /* Mobile-friendly sizing */
   max-width: calc(100vw - 20px);
   max-height: calc(100vh - 80px);
 }
 
 .window-header {
-  @apply flex items-center justify-between p-2 border-b border-white/10 cursor-move;
+  @apply flex items-center justify-between p-3 border-b border-white/10 cursor-move;
   /* Touch-friendly header */
-  min-height: 44px;
+  min-height: 48px;
 }
 
 .window-controls {
@@ -80,14 +80,18 @@
 }
 
 .window-control-button {
-  @apply w-6 h-6 rounded-full transition-colors flex items-center justify-center;
+  @apply w-7 h-7 rounded-full transition-colors flex items-center justify-center;
   /* Larger touch targets */
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 .minimize-button {
   @apply bg-yellow-500 hover:bg-yellow-600;
+}
+
+.maximize-button {
+  @apply bg-green-500 hover:bg-green-600;
 }
 
 .close-button {
@@ -95,12 +99,12 @@
 }
 
 .desktop-icon {
-  @apply fixed flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-all;
-  width: 80px;
-  height: 80px;
+  @apply fixed flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 cursor-pointer transition-all;
+  width: 90px;
+  height: 90px;
   /* Touch-friendly sizing */
-  min-width: 64px;
-  min-height: 64px;
+  min-width: 80px;
+  min-height: 80px;
 }
 
 /* Mobile-specific styles */
@@ -146,4 +150,28 @@
   min-width: 60px;
   min-height: 60px;
   touch-action: manipulation;
+}
+
+/* Utility classes for better spacing and sizing */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Animation improvements */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }
