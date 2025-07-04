@@ -40,17 +40,24 @@ const DesktopIcons = ({ isMobile, onIconClick }: DesktopIconsProps) => {
 
   return (
     <>
-      {desktopIcons.map((icon, index) => (
-        <div 
-          key={index}
-          className="desktop-icon"
-          style={{ left: '20px', top: `${40 + index * 90}px` }}
-          onClick={() => onIconClick(icon.type)}
-        >
-          <icon.icon className="w-8 h-8 text-white/80" />
-          <span className="text-xs mt-2">{icon.label}</span>
-        </div>
-      ))}
+      {desktopIcons.map((icon, index) => {
+        const column = Math.floor(index / 8);
+        const row = index % 8;
+        const xPosition = 20 + (column * 110); // 110px spacing between columns
+        const yPosition = 40 + (row * 90); // 90px spacing between rows
+        
+        return (
+          <div 
+            key={index}
+            className="desktop-icon"
+            style={{ left: `${xPosition}px`, top: `${yPosition}px` }}
+            onClick={() => onIconClick(icon.type)}
+          >
+            <icon.icon className="w-8 h-8 text-white/80" />
+            <span className="text-xs mt-2">{icon.label}</span>
+          </div>
+        );
+      })}
     </>
   );
 };

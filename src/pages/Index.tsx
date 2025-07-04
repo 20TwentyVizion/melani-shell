@@ -112,6 +112,7 @@ const Index = () => {
         isMobile={isMobile}
         windowStates={windowStates}
         onCloseWindow={closeWindow}
+        onOpenWindow={openWindow}
       />
 
       <Dock 

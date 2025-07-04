@@ -5,13 +5,40 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotification } from '@/contexts/NotificationContext';
 
-const SettingsPanel = () => {
+interface SettingsPanelProps {
+  onSystemMonitorClick?: () => void;
+}
+
+const SettingsPanel = ({ onSystemMonitorClick }: SettingsPanelProps) => {
   const { currentTheme, themes, setTheme } = useTheme();
-  const { showSuccess } = useNotification();
+  const { showSuccess, showInfo } = useNotification();
 
   const handleThemeChange = (themeId: string) => {
     setTheme(themeId);
     showSuccess('Theme changed', 'Your theme has been updated successfully');
+  };
+
+  const handleEditProfile = () => {
+    showInfo('Profile Editor', 'Opening profile settings...');
+    // This would typically open a profile editing modal or navigate to profile page
+  };
+
+  const handleSystemMonitor = () => {
+    if (onSystemMonitorClick) {
+      onSystemMonitorClick();
+    } else {
+      showInfo('System Monitor', 'Opening system monitor...');
+    }
+  };
+
+  const handlePerformanceSettings = () => {
+    showInfo('Performance Settings', 'Optimizing system performance...');
+    // This would typically open performance tuning options
+  };
+
+  const handleStorageManagement = () => {
+    showInfo('Storage Management', 'Analyzing storage usage...');
+    // This would typically open storage cleanup tools
   };
 
   return (
@@ -63,7 +90,9 @@ const SettingsPanel = () => {
               <div className="text-sm opacity-70">john.doe@example.com</div>
             </div>
           </div>
-          <Button className="w-full glass-effect">Edit Profile</Button>
+          <Button className="w-full glass-effect" onClick={handleEditProfile}>
+            Edit Profile
+          </Button>
         </CardContent>
       </Card>
 
@@ -98,9 +127,15 @@ const SettingsPanel = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button className="w-full glass-effect">System Monitor</Button>
-          <Button className="w-full glass-effect">Performance Settings</Button>
-          <Button className="w-full glass-effect">Storage Management</Button>
+          <Button className="w-full glass-effect" onClick={handleSystemMonitor}>
+            System Monitor
+          </Button>
+          <Button className="w-full glass-effect" onClick={handlePerformanceSettings}>
+            Performance Settings
+          </Button>
+          <Button className="w-full glass-effect" onClick={handleStorageManagement}>
+            Storage Management
+          </Button>
         </CardContent>
       </Card>
     </div>

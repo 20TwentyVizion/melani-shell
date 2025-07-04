@@ -32,9 +32,16 @@ interface WindowManagerProps {
     showAppStore: boolean;
   };
   onCloseWindow: (windowType: string) => void;
+  onOpenWindow?: (windowType: string) => void;
 }
 
-const WindowManager = ({ isMobile, windowStates, onCloseWindow }: WindowManagerProps) => {
+const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: WindowManagerProps) => {
+  const handleSystemMonitorClick = () => {
+    if (onOpenWindow) {
+      onOpenWindow('systemMonitor');
+    }
+  };
+
   return (
     <>
       {windowStates.showMelani && (
@@ -67,7 +74,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow }: WindowManagerP
           onClose={() => onCloseWindow('settings')}
           isMobile={isMobile}
         >
-          <SettingsPanel />
+          <SettingsPanel onSystemMonitorClick={handleSystemMonitorClick} />
         </MovableWindow>
       )}
 
