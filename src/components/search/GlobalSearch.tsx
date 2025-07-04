@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { Search, File, Calendar, User, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { LucideIcon } from 'lucide-react';
 
 interface SearchResult {
   id: string;
   title: string;
   type: 'file' | 'app' | 'setting' | 'contact';
-  icon: React.ComponentType;
+  icon: LucideIcon;
   action: () => void;
 }
 
