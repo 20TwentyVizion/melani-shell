@@ -48,7 +48,7 @@ const GlobalSearch = ({ onClose }: { onClose: () => void }) => {
       <Card className="w-full max-w-2xl mx-4 glass-effect border-none">
         <CardContent className="p-0">
           <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={20} color="#9CA3AF" className="absolute left-3 top-1/2 transform -translate-y-1/2" />
             <Input
               placeholder="Search apps, files, and settings..."
               value={query}
@@ -66,7 +66,7 @@ const GlobalSearch = ({ onClose }: { onClose: () => void }) => {
                   className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors"
                   onClick={() => handleResultClick(result)}
                 >
-                  <result.icon className="w-5 h-5 text-gray-400" />
+                  <result.icon size={20} color="#9CA3AF" />
                   <div>
                     <div className="font-medium">{result.title}</div>
                     <div className="text-sm opacity-70 capitalize">{result.type}</div>
