@@ -265,7 +265,9 @@ Use this contextual information naturally in your responses. If the user asks ab
       <CardHeader className="flex flex-row items-center space-x-2">
         <Bot className="w-5 h-5" />
         <CardTitle className="text-lg">Melani Assistant</CardTitle>
-        <Brain className="w-4 h-4 text-blue-400" title="Enhanced with AI" />
+        <div title="Enhanced with AI">
+          <Brain className="w-4 h-4 text-blue-400" />
+        </div>
         {!isModelLoaded && (
           <Download className="w-4 h-4 animate-bounce" />
         )}
