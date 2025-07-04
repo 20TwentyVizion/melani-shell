@@ -1,30 +1,34 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, Download, Mic, MicOff, Volume2 } from "lucide-react";
+import { Send, Bot, Download, Mic, MicOff, Volume2, Brain, Lightbulb } from "lucide-react";
 import { useSystemMemory } from "@/lib/systemMemory";
 import { useVoiceSettings } from "@/lib/voiceSettings";
 import { useLLMSettings } from "@/lib/llmSettings";
 import { VoiceService, VoiceState } from "@/lib/voiceService";
 import { LLMClient } from "@/lib/llmClient";
+import { useSmartSuggestions } from "@/lib/smartSuggestions";
+import { usePredictiveText } from "@/lib/predictiveText";
 
 const MelaniAssistant = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Array<{ text: string; isUser: boolean }>>([
-    { text: "Hey there! I'm Melani. I'm loading up my brain... give me a moment!", isUser: false },
+    { text: "Hey there! I'm Melani, your enhanced AI assistant. I now have contextual awareness and can help you with smart suggestions!", isUser: false },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState("");
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const llmClientRef = useRef<LLMClient | null>(null);
   const voiceServiceRef = useRef<VoiceService | null>(null);
   const { addProcess, removeProcess } = useSystemMemory();
   const { voiceInputEnabled, voiceOutputEnabled, selectedVoice } = useVoiceSettings();
   const { provider, geminiApiKey, ollamaUrl, ollamaModel } = useLLMSettings();
+  const { getSmartSuggestions, getMostUsedApps } = useSmartSuggestions();
+  const { getSuggestions, addPhrase } = usePredictiveText();
 
   useEffect(() => {
     addProcess("Melani Assistant", 256);
@@ -85,9 +89,9 @@ const MelaniAssistant = () => {
         
         // Update the welcome message based on provider
         const welcomeMessages = {
-          webllm: "Hey there! I'm Melani, now running locally on your device. What's on your mind?",
-          gemini: "Hey there! I'm Melani, powered by Google Gemini. What can I help you with?",
-          ollama: "Hey there! I'm Melani, running on your local Ollama instance. How can I assist you?"
+          webllm: "Hey there! I'm Melani, now running locally with enhanced contextual awareness. What's on your mind?",
+          gemini: "Hey there! I'm Melani, powered by Google Gemini with smart suggestions. What can I help you with?",
+          ollama: "Hey there! I'm Melani, running on your local Ollama with AI-powered insights. How can I assist you?"
         };
         
         setMessages([
@@ -116,32 +120,64 @@ const MelaniAssistant = () => {
     return saved ? JSON.parse(saved) : null;
   };
 
+  const getEnhancedContext = () => {
+    const currentTime = new Date();
+    const timeOfDay = currentTime.getHours() >= 5 && currentTime.getHours() < 12 ? 'morning' :
+                     currentTime.getHours() >= 12 && currentTime.getHours() < 17 ? 'afternoon' :
+                     currentTime.getHours() >= 17 && currentTime.getHours() < 20 ? 'evening' : 'night';
+    
+    const smartSuggestions = getSmartSuggestions(3);
+    const mostUsedApps = getMostUsedApps(timeOfDay);
+    
+    return {
+      timeOfDay,
+      currentTime: currentTime.toLocaleString(),
+      smartSuggestions,
+      mostUsedApps,
+      dayOfWeek: currentTime.toLocaleDateString('en-US', { weekday: 'long' })
+    };
+  };
+
   const handleSend = async (messageText?: string) => {
     const userMessage = messageText || input.trim();
     if (!userMessage || !isModelLoaded || !llmClientRef.current) return;
     
+    // Add to predictive text learning
+    addPhrase(userMessage);
+    
     setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
     setInput("");
     setIsLoading(true);
+    setShowSuggestions(false);
     
     try {
       addProcess("Message Processing", 64);
       
       const profile = getProfile();
-      const systemPrompt = `You are Melani, a casual and slightly snarky AI assistant. Keep responses conversational and brief (1-2 lines) unless a detailed explanation is needed.
-User's name: ${profile?.name || 'Unknown'}
-User's interests: ${profile?.interests?.join(', ') || 'Unknown'}
+      const context = getEnhancedContext();
+      
+      const systemPrompt = `You are Melani, a casual and slightly snarky AI assistant with enhanced contextual awareness. Keep responses conversational and brief (1-2 lines) unless a detailed explanation is needed.
+
+Current Context:
+- Time: ${context.currentTime} (${context.timeOfDay})
+- Day: ${context.dayOfWeek}
+- User's most used apps right now: ${context.mostUsedApps.join(', ')}
+- Smart suggestions: ${context.smartSuggestions.join(', ')}
+
+User Profile:
+- Name: ${profile?.name || 'Unknown'}
+- Interests: ${profile?.interests?.join(', ') || 'Unknown'}
 
 Previous context: ${messages.slice(-3).map(m => `${m.isUser ? 'User' : 'Melani'}: ${m.text}`).join('\n')}
 
-Respond naturally without directly mentioning the user's profile information unless relevant to the conversation.`;
+Use this contextual information naturally in your responses. If the user asks about productivity, reference their usage patterns. If they ask for app recommendations, use the smart suggestions. Be helpful and proactive!`;
 
       const response = await llmClientRef.current.chat([
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage }
       ], {
         temperature: 0.7,
-        maxTokens: 150,
+        maxTokens: 200,
       });
 
       const responseText = response.content || response.error || "Sorry, I didn't catch that. Mind trying again?";
@@ -162,6 +198,23 @@ Respond naturally without directly mentioning the user's profile information unl
       setIsLoading(false);
       removeProcess("Message Processing");
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+    
+    // Show predictive suggestions
+    if (value.length > 1) {
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    setShowSuggestions(false);
   };
 
   const handleVoiceToggle = () => {
@@ -205,11 +258,14 @@ Respond naturally without directly mentioning the user's profile information unl
     }
   };
 
+  const predictiveSuggestions = showSuggestions ? getSuggestions(input, 3) : [];
+
   return (
     <Card className="glass-effect h-[calc(100vh-8rem)] flex flex-col animate-fade-in">
       <CardHeader className="flex flex-row items-center space-x-2">
         <Bot className="w-5 h-5" />
         <CardTitle className="text-lg">Melani Assistant</CardTitle>
+        <Brain className="w-4 h-4 text-blue-400" title="Enhanced with AI" />
         {!isModelLoaded && (
           <Download className="w-4 h-4 animate-bounce" />
         )}
@@ -257,42 +313,61 @@ Respond naturally without directly mentioning the user's profile information unl
           )}
         </div>
         
-        <div className="flex space-x-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              voiceState === 'listening' ? "Listening..." :
-              voiceState === 'processing' ? "Processing..." :
-              isModelLoaded ? "Type your message..." : "Loading model..."
-            }
-            className="glass-effect"
-            disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-          />
-          
-          {voiceInputEnabled && voiceServiceRef.current?.isSupported() && (
-            <Button
-              onClick={handleVoiceToggle}
-              className={getVoiceButtonClass()}
-              disabled={!isModelLoaded || isLoading}
-              title={
-                voiceState === 'listening' ? "Stop listening" :
-                voiceState === 'processing' ? "Processing..." :
-                "Start voice input"
-              }
-            >
-              <VoiceIcon className="h-4 w-4" />
-            </Button>
+        <div className="relative">
+          {/* Predictive suggestions */}
+          {predictiveSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-black/80 rounded-lg border border-white/20 max-h-32 overflow-y-auto">
+              {predictiveSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <Lightbulb className="w-3 h-3" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           )}
           
-          <Button
-            onClick={() => handleSend()}
-            className="bg-white/10 hover:bg-white/20"
-            disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <div className="flex space-x-2">
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={
+                voiceState === 'listening' ? "Listening..." :
+                voiceState === 'processing' ? "Processing..." :
+                isModelLoaded ? "Type your message..." : "Loading model..."
+              }
+              className="glass-effect"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              onFocus={() => input.length > 1 && setShowSuggestions(true)}
+            />
+            
+            {voiceInputEnabled && voiceServiceRef.current?.isSupported() && (
+              <Button
+                onClick={handleVoiceToggle}
+                className={getVoiceButtonClass()}
+                disabled={!isModelLoaded || isLoading}
+                title={
+                  voiceState === 'listening' ? "Stop listening" :
+                  voiceState === 'processing' ? "Processing..." :
+                  "Start voice input"
+                }
+              >
+                <VoiceIcon className="h-4 w-4" />
+              </Button>
+            )}
+            
+            <Button
+              onClick={() => handleSend()}
+              className="bg-white/10 hover:bg-white/20"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
