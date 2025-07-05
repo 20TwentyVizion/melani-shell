@@ -2,7 +2,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LLMProvider } from './llmClient';
+import { validateEnv } from './envValidator';
 
+// Get validated environment variables
+const { env } = validateEnv();
+
+// Define our settings interface
 interface LLMSettings {
   provider: LLMProvider;
   geminiApiKey: string;
@@ -14,13 +19,16 @@ interface LLMSettings {
   setOllamaModel: (model: string) => void;
 }
 
-export const useLLMSettings = create<LLMSettings>()(
-  persist(
+// Create the store with proper type annotation
+type LLMSettingsStore = (set: any) => LLMSettings;
+
+export const useLLMSettings = create<LLMSettings>(
+  persist<LLMSettings>(
     (set) => ({
-      provider: 'gemini',
-      geminiApiKey: '',
-      ollamaUrl: 'http://localhost:11434',
-      ollamaModel: 'llama2',
+      provider: env.defaultLLMProvider,
+      geminiApiKey: env.geminiApiKey || '',
+      ollamaUrl: env.ollamaUrl,
+      ollamaModel: env.ollamaModel,
       setProvider: (provider) => set({ provider }),
       setGeminiApiKey: (apiKey) => set({ geminiApiKey: apiKey }),
       setOllamaUrl: (url) => set({ ollamaUrl: url }),
