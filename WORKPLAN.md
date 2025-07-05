@@ -46,6 +46,23 @@ This document outlines the planned enhancements for Melani OS - an AI-enhanced w
 - [ ] Design workspace context architecture
 - [ ] Implement workspace management UI
 - [ ] Create workspace switching mechanism
+
+### 2.2 Window & UI Improvements
+
+- [ ] Optimize initial window sizing for better content visibility
+- [ ] Implement glassmorphism design system for modern aesthetics
+- [ ] Add gesture-first interaction support
+  - [ ] Voice + gestures for app navigation
+  - [ ] Swipe gestures for mobile interfaces (3-finger up = open dashboard)
+
+### 2.3 Advanced Speech & Hands-Free Mode
+
+- [ ] Fully implement STT/TTS capabilities
+- [ ] Create comprehensive hands-free mode
+  - [ ] Auto-start/stop listening mechanism
+  - [ ] Silence detection for message auto-send
+  - [ ] Continuous conversation flow
+  - [ ] Voice command visualization
 - [ ] Add workspace-specific settings
 - [ ] Enable AI-suggested workspace creation
 
@@ -129,24 +146,81 @@ This document outlines the planned enhancements for Melani OS - an AI-enhanced w
 - [ ] Create document understanding
 - [ ] Enable multi-modal content generation
 
-### 5.2 AI Agents
+### 5.2 Advanced Agent System (M-Play)
 
-- [ ] Design agent framework architecture
-- [ ] Implement specialized AI agents
-  - [ ] Productivity assistant
-  - [ ] Research companion
-  - [ ] Creative collaborator
-  - [ ] System optimizer
-- [ ] Create agent communication protocol
-- [ ] Build agent monitoring dashboard
+- [ ] Design comprehensive agent framework architecture
+- [ ] Create Agent Playground (M-Play) virtual environment
+  - [ ] Implement WebAssembly/web-based VM sandbox
+  - [ ] Build guided UI automation recording and replay
+  - [ ] Develop OODA Loop Strategy Layer
+    ```ts
+    interface OODAState {
+      observation: string; // Screenshot summary or visual state
+      orientation: string[]; // Potential next paths
+      decision: string; // Chosen path
+      action: string; // Mouse/keyboard move or typed output
+    }
+    ```
+- [ ] Implement Visual AI Control Surface
+  - [ ] Add "Melani Cursor" (blue dot) showing agent actions
+  - [ ] Create Interrupt/Resume mechanism for user control
+- [ ] Build Agent Benchmarking Module (M-Bench)
+  - [ ] Create SDK-style terminal for agent performance logging
+  - [ ] Track actions, error rates, and completion times
+  - [ ] Implement export functionality for developer review
 
-### 5.3 Contextual Learning
+### 5.3 AI Teaching Mode (M-Teach)
+
+- [ ] Implement user input recording system for training demos
+  - [ ] Pointer tracking
+  - [ ] Voice input logging
+  - [ ] UI event capture
+- [ ] Develop reusable automation recipe system
+- [ ] Create Task Timeline Component
+  ```tsx
+  <TaskTimeline 
+    steps={[
+      { id: '1', label: 'Open Firefox', status: 'completed' },
+      { id: '2', label: 'Search Salt Price', status: 'in_progress' },
+      { id: '3', label: 'Parse Results', status: 'pending' }
+    ]}
+    currentStep="2"
+  />
+  ```
+- [ ] Build Task Timeline Sidebar with hoverable steps
+  - [ ] Current action visualization
+  - [ ] Next planned action preview
+  - [ ] Visual timeline with breadcrumbs
+  - [ ] "Explain Step" hover functionality
+
+### 5.4 Contextual Learning
 
 - [ ] Implement federated learning capabilities
 - [ ] Create differential privacy mechanisms
 - [ ] Build continuous learning pipelines
 - [ ] Develop feedback incorporation system
 - [ ] Add knowledge expansion features
+
+### 5.5 Universal App Store Enhancements
+
+- [ ] Design comprehensive app store architecture
+- [ ] Implement cloud-based VM integration for Windows/Mac apps
+- [ ] Create iframe-sandboxed app environment
+- [ ] Build upload system for multiple formats (.exe, .app, .apk, ZIP)
+- [ ] Develop auto-generation system for interaction recipes
+  - [ ] Pre-trained interaction models
+  - [ ] User-trained custom interactions
+
+### 5.6 OS Three-Layer Architecture
+
+- [ ] Redesign OS architecture into distinct layers
+  - [ ] User Layer - Manual control interface
+  - [ ] Assistant Layer - Active AI workspace
+  - [ ] Meta Layer - Profile, settings, agent permissions
+- [ ] Implement collapsible chat interface (minimized by default)
+- [ ] Create smooth transitions between layers
+- [ ] Build permission model between layers
+- [ ] Develop API interfaces between layers
 
 ## Implementation Guidelines
 

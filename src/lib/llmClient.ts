@@ -1,5 +1,6 @@
 
 import * as webllm from "@mlc-ai/web-llm";
+import { getMemoryEnhancedContext, generateSystemPromptEnhancement } from './memory';
 
 export type LLMProvider = 'webllm' | 'gemini' | 'ollama';
 
@@ -18,6 +19,12 @@ export interface ChatMessage {
 export interface LLMResponse {
   content: string;
   error?: string;
+}
+
+export interface ChatOptions {
+  temperature?: number;
+  maxTokens?: number;
+  includeMemoryContext?: boolean;
 }
 
 export class LLMClient {
@@ -66,7 +73,7 @@ export class LLMClient {
     }
   }
 
-  async chat(messages: ChatMessage[], options: { temperature?: number; maxTokens?: number } = {}): Promise<LLMResponse> {
+  async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<LLMResponse> {
     try {
       switch (this.config.provider) {
         case 'webllm':
@@ -84,13 +91,16 @@ export class LLMClient {
     }
   }
 
-  private async chatWebLLM(messages: ChatMessage[], options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+  private async chatWebLLM(messages: ChatMessage[], options: ChatOptions): Promise<LLMResponse> {    
+    // Enhance messages with memory context if requested
+    const enhancedMessages = this.enhanceMessagesWithMemoryContext(messages, options);
+
     if (!this.webllmEngine || !this.isWebLLMLoaded) {
       return { content: '', error: 'WebLLM not initialized' };
     }
 
     const completion = await this.webllmEngine.chat.completions.create({
-      messages: messages,
+      messages: enhancedMessages,
       temperature: options.temperature || 0.7,
       max_tokens: options.maxTokens || 150,
     });
@@ -99,13 +109,16 @@ export class LLMClient {
     return { content };
   }
 
-  private async chatGemini(messages: ChatMessage[], options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+  private async chatGemini(messages: ChatMessage[], options: ChatOptions): Promise<LLMResponse> {
+    // Enhance messages with memory context if requested
+    const enhancedMessages = this.enhanceMessagesWithMemoryContext(messages, options);
+
     if (!this.config.apiKey) {
       return { content: '', error: 'Gemini API key not provided' };
     }
 
     // Convert messages to Gemini format
-    const geminiMessages = messages.map(msg => ({
+    const geminiMessages = enhancedMessages.map(msg => ({
       role: msg.role === 'assistant' ? 'model' : msg.role,
       parts: [{ text: msg.content }]
     }));
@@ -133,7 +146,10 @@ export class LLMClient {
     return { content };
   }
 
-  private async chatOllama(messages: ChatMessage[], options: { temperature?: number; maxTokens?: number }): Promise<LLMResponse> {
+  private async chatOllama(messages: ChatMessage[], options: ChatOptions): Promise<LLMResponse> {
+    // Enhance messages with memory context if requested
+    const enhancedMessages = this.enhanceMessagesWithMemoryContext(messages, options);
+
     const ollamaUrl = this.config.ollamaUrl || 'http://localhost:11434';
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
@@ -143,7 +159,7 @@ export class LLMClient {
       },
       body: JSON.stringify({
         model: this.config.model || 'llama2',
-        messages: messages,
+        messages: enhancedMessages,
         stream: false,
         options: {
           temperature: options.temperature || 0.7,
@@ -174,5 +190,48 @@ export class LLMClient {
 
   getProvider(): LLMProvider {
     return this.config.provider;
+  }
+  
+  /**
+   * Enhances the chat messages with memory context when enabled
+   * This adds system prompts with information about time of day,
+   * user preferences, active apps, and conversation context
+   */
+  private enhanceMessagesWithMemoryContext(messages: ChatMessage[], options: ChatOptions): ChatMessage[] {
+    // If memory context is not requested, return original messages
+    if (options.includeMemoryContext === false) {
+      return [...messages];
+    }
+    
+    // Generate memory context enhancement
+    const memoryPrompt = generateSystemPromptEnhancement();
+    
+    // If there's no meaningful context, return original messages
+    if (!memoryPrompt || memoryPrompt.trim().length === 0) {
+      return [...messages];
+    }
+    
+    // Clone the messages array
+    const enhancedMessages = [...messages];
+    
+    // Check if there's already a system message
+    const systemMessageIndex = enhancedMessages.findIndex(msg => msg.role === 'system');
+    
+    if (systemMessageIndex !== -1) {
+      // Append to existing system message
+      enhancedMessages[systemMessageIndex] = {
+        role: 'system',
+        content: enhancedMessages[systemMessageIndex].content + '\n\n' + 
+                'Context from memory system: ' + memoryPrompt
+      };
+    } else {
+      // Add new system message at the beginning
+      enhancedMessages.unshift({
+        role: 'system',
+        content: 'Context from memory system: ' + memoryPrompt
+      });
+    }
+    
+    return enhancedMessages;
   }
 }
