@@ -126,7 +126,18 @@ class LLMClient implements LLMClientInterface {
     // Mock implementation
   }
 }
-  
+
+// Simple UUID generator function to replace uuid package dependency
+function generateId(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// MelaniAssistant Component
+const MelaniAssistant: React.FC = () => {
   // Refs for LLM client and voice service
   const llmClientRef = React.useRef<LLMClientInterface>(new LLMClient());
   const voiceServiceRef = React.useRef<VoiceServiceInterface>(new VoiceService());
@@ -450,19 +461,416 @@ class LLMClient implements LLMClientInterface {
   );
 };
 
-export default MelaniAssistant;
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  // Custom hooks
+  const systemMemory = useSystemMemory();
+  const voiceSettings = useVoiceSettings();
+  const llmSettings = useLLMSettings();
+  const { suggestions, setSuggestions } = useSmartSuggestions();
+  const { predictiveText, setPredictiveText } = usePredictiveText();
+  const { addMemory } = useMemoryStore();
+
+  // Initialize LLM
+  const initializeLLM = async () => {
+    try {
+      setIsLoading(true);
+      systemMemory.addProcess?.("LLM Initialization");
+      await llmClientRef.current.initialize({
+        provider: llmSettings.provider,
+        ollamaModel: llmSettings.ollamaModel,
+        progressCallback: (progress) => setLoadingProgress(progress),
+      });
+      setIsModelLoaded(true);
+    } catch (error: any) {
+      setLoadingProgress(`Error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+      systemMemory.removeProcess?.("LLM Initialization");
+    }
+  };
+
+  // Initialize voice service
+  const initializeVoiceService = async () => {
+    try {
+      voiceServiceRef.current.onSpeechResult = (text) => {
+        setInput(text);
+        // Auto-send if enabled
+        if (voiceSettings.autoSpeak) {
+          setTimeout(() => {
+            if (text.trim().length > 0) {
+              sendMessage();
+            }
+          }, 500);
+        }
+      };
+
+      voiceServiceRef.current.onStateChange = (state) => {
+        setVoiceState(state);
+      };
+
+      await voiceServiceRef.current.initialize();
+      setIsVoiceInputEnabled(voiceSettings.enabled);
+    } catch (error) {
+      console.error("Failed to initialize voice service:", error);
+    }
+  };
+
+  // Toggle voice input
+  const toggleVoiceInput = () => {
+    if (voiceState === 'listening') {
+      voiceServiceRef.current.stopListening();
+    } else {
+      voiceServiceRef.current.startListening();
+    }
+  };
+
+  // Handle voice output
+  const handleVoiceOutput = async (text: string) => {
+    if (voiceSettings.autoSpeak && text.trim()) {
+      try {
+        await voiceServiceRef.current.speak(text, voiceSettings.voice);
+      } catch (error) {
+        console.error("Voice output error:", error);
+      }
+    }
+  };
+
+  // Send message
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      text: input.trim(),
+      isUser: true,
+      id: generateId(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setShowSuggestions(false);
+
+    // Update memory context with user message
+    const userChatMessage: MemoryChatMessage = {
+      role: "user",
+      content: input,
+    };
+    await updateMemoryWithChatMessage(userChatMessage);
+
+    try {
+      setIsLoading(true);
+      
+      // Get memory-enhanced context for better responses
+      const memoryContext = await getMemoryEnhancedContext(userChatMessage.content);
+      setMemoryContext(memoryContext);
+
+      // Create the messages array for the LLM
+      const chatMessages: ChatMessage[] = [
+        { role: "system", content: generateSystemPromptEnhancement(memoryContext) },
+        ...messages.map(msg => ({
+          role: msg.isUser ? "user" : "assistant",
+          content: msg.text,
+        })),
+        { role: "user", content: userMessage.text },
+      ];
+
+      const response = await llmClientRef.current.chat(chatMessages, {
+        temperature: llmSettings.temperature || 0.7,
+        maxTokens: llmSettings.maxTokens || 1000,
+      });
+
+      if (response.content) {
+        const assistantMessage: Message = {
+          text: response.content,
+          isUser: false,
+          id: generateId(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Store in memory
+        const assistantChatMessage: MemoryChatMessage = {
+          role: "assistant",
+          content: response.content,
+        };
+        await updateMemoryWithChatMessage(assistantChatMessage);
+
+        // Handle voice output
+        handleVoiceOutput(response.content);
+      } else if (response.error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: `Error: ${response.error}`,
+            isUser: false,
+            id: generateId(),
+          },
+        ]);
+      }
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Error: ${error.message || "Unknown error"}`,
+          isUser: false,
+          id: generateId(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    
+    // Show suggestions based on input
+    if (e.target.value.length > 0) {
+      setShowSuggestions(true);
+      setPredictiveSuggestions(predictiveText.filter(text => 
+        text.toLowerCase().includes(e.target.value.toLowerCase())
+      ).slice(0, 3));
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle key press events
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    sendMessage();
+  };
+
+  // Handle predictive text suggestion
+  const usePredictiveTextSuggestion = (text: string) => {
+    setInput((prev) => `${prev}${text.slice(prev.length)} `);
+  };
+
+  // Download chat history
+  const downloadChatHistory = () => {
+    const history = messages.map((msg) => 
+      `${msg.isUser ? 'You' : 'Assistant'}: ${msg.text}`
+    ).join('\n\n');
+    
+    const blob = new Blob([history], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `melani-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle voice button class
+  const getVoiceButtonClass = () => {
+    if (voiceState === 'listening') {
+      return 'bg-red-500 hover:bg-red-600 animate-pulse';
+    } else if (voiceState === 'processing') {
+      return 'bg-yellow-500 hover:bg-yellow-600';
+    }
+    return 'bg-white/10 hover:bg-white/20';
+  };
+
+  // Get voice icon based on state
+  const VoiceIcon = () => {
+    if (voiceState === 'listening' || voiceState === 'processing') {
+      return <MicOff className="h-4 w-4" />;
+    }
+    return <Mic className="h-4 w-4" />;
+  };
+
+  // Get provider display name
+  const getProviderDisplayName = () => {
+    if (llmSettings.provider === 'gemini') {
+      return 'Gemini';
+    } else if (llmSettings.provider === 'ollama') {
+      return `Ollama (${llmSettings.ollamaModel || 'default'})`;
+    }
+    return llmSettings.provider;
+  };
+
+  // Handle voice toggle
+  const handleVoiceToggle = () => {
+    toggleVoiceInput();
+  };
+
+  // Handle send button click
+  const handleSend = () => {
+    sendMessage();
+  };
+
+  // Initialize on mount
+  React.useEffect(() => {
+    initializeLLM();
+    initializeVoiceService();
+    
+    return () => {
+      llmClientRef.current.dispose();
+      voiceServiceRef.current.dispose();
+    };
+  }, []);
+
+  // Render component
+  return (
+    <Card className="w-full h-full flex flex-col overflow-hidden bg-gradient-to-b from-black/80 to-gray-900/80 border-white/10">
+      <CardHeader className="border-b border-white/10 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Bot className="h-5 w-5 text-blue-400" />
+            <CardTitle className="text-lg font-medium text-white">Melani Assistant</CardTitle>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={downloadChatHistory}
+              title="Download chat history"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Memory-enhanced context"
+              disabled={!memoryContext}
+            >
+              <Brain className="h-4 w-4" />
+            </Button>
+            {voiceSettings.autoSpeak && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Voice output enabled"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            )}
+            <span className="text-xs text-white/60 ml-2">
+              {getProviderDisplayName()}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col">
+        {!isModelLoaded && loadingProgress && (
+          <div className="mb-4 p-3 bg-blue-500/20 rounded-lg">
+            <div className="text-sm text-blue-200">{loadingProgress}</div>
+          </div>
+        )}
+        
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
+            >
+              <div
+                className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  message.isUser
+                    ? 'bg-white/10 text-white'
+                    : 'bg-black/30 text-white'
+                }`}
+              >
+                {message.text}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="bg-black/30 text-white rounded-lg px-4 py-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="relative">
+          {/* Predictive suggestions */}
+          {predictiveSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-black/80 rounded-lg border border-white/20 max-h-32 overflow-y-auto">
+              {predictiveSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <Lightbulb className="w-3 h-3" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex space-x-2">
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={
+                voiceState === 'listening' ? "Listening..." :
+                voiceState === 'processing' ? "Processing..." :
+                isModelLoaded ? "Type your message..." : "Loading model..."
+              }
+              className="glass-effect"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+              onKeyPress={handleKeyPress}
+              onFocus={() => input.length > 1 && setShowSuggestions(true)}
+            />
+            
+            {isVoiceInputEnabled && voiceServiceRef.current?.isSupported() && (
+              <Button
+                onClick={handleVoiceToggle}
+                className={getVoiceButtonClass()}
+                disabled={!isModelLoaded || isLoading}
+                title={
+                  voiceState === 'listening' ? "Stop listening" :
+                  voiceState === 'processing' ? "Processing..." :
+                  "Start voice input"
+                }
+              >
+                <VoiceIcon />
+              </Button>
+            )}
+            
+            <Button
+              onClick={handleSend}
+              className="bg-white/10 hover:bg-white/20"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isVoiceInputEnabled, setIsVoiceInputEnabled] = React.useState<boolean>(false);
   const [isModelLoaded, setIsModelLoaded] = React.useState<boolean>(false);
-  const [loadingProgress, setLoadingProgress] = React.useState<string | number>(0);
+  const [loadingProgress, setLoadingProgress] = React.useState<string | number>("");
   const [voiceState, setVoiceState] = React.useState<VoiceStateType>("idle");
   const [memoryContext, setMemoryContext] = React.useState<string>("");
-  
+  const [showSuggestions, setShowSuggestions] = React.useState<boolean>(false);
+  const [predictiveSuggestions, setPredictiveSuggestions] = React.useState<string[]>([]);
+  const [input, setInput] = React.useState("");
+
   // Refs for LLM client and voice service
   const llmClientRef = React.useRef<LLMClientInterface>(new LLMClient());
   const voiceServiceRef = React.useRef<VoiceServiceInterface>(new VoiceService());
-  
+
   // Custom hooks
   const systemMemory = useSystemMemory();
   const voiceSettings = useVoiceSettings();
@@ -782,8 +1190,407 @@ export default MelaniAssistant;
   );
 };
 
-export default MelaniAssistant;
+  // Custom hooks
+  const systemMemory = useSystemMemory();
+  const voiceSettings = useVoiceSettings();
+  const llmSettings = useLLMSettings();
+  const { suggestions, setSuggestions } = useSmartSuggestions();
+  const { predictiveText, setPredictiveText } = usePredictiveText();
+  const { addMemory } = useMemoryStore();
 
+  // Initialize LLM
+  const initializeLLM = async () => {
+    try {
+      setIsLoading(true);
+      systemMemory.addProcess?.("LLM Initialization");
+      await llmClientRef.current.initialize({
+        provider: llmSettings.provider,
+        ollamaModel: llmSettings.ollamaModel,
+        progressCallback: (progress) => setLoadingProgress(progress),
+      });
+      setIsModelLoaded(true);
+    } catch (error: any) {
+      setLoadingProgress(`Error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+      systemMemory.removeProcess?.("LLM Initialization");
+    }
+  };
+
+  // Initialize voice service
+  const initializeVoiceService = async () => {
+    try {
+      voiceServiceRef.current.onSpeechResult = (text) => {
+        setInput(text);
+        // Auto-send if enabled
+        if (voiceSettings.autoSpeak) {
+          setTimeout(() => {
+            if (text.trim().length > 0) {
+              sendMessage();
+            }
+          }, 500);
+        }
+      };
+
+      voiceServiceRef.current.onStateChange = (state) => {
+        setVoiceState(state);
+      };
+
+      await voiceServiceRef.current.initialize();
+      setIsVoiceInputEnabled(voiceSettings.enabled);
+    } catch (error) {
+      console.error("Failed to initialize voice service:", error);
+    }
+  };
+
+  // Toggle voice input
+  const toggleVoiceInput = () => {
+    if (voiceState === 'listening') {
+      voiceServiceRef.current.stopListening();
+    } else {
+      voiceServiceRef.current.startListening();
+    }
+  };
+
+  // Handle voice output
+  const handleVoiceOutput = async (text: string) => {
+    if (voiceSettings.autoSpeak && text.trim()) {
+      try {
+        await voiceServiceRef.current.speak(text, voiceSettings.voice);
+      } catch (error) {
+        console.error("Voice output error:", error);
+      }
+    }
+  };
+
+  // Send message
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      text: input.trim(),
+      isUser: true,
+      id: generateId(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setShowSuggestions(false);
+
+    // Update memory context with user message
+    const userChatMessage: MemoryChatMessage = {
+      role: "user",
+      content: input,
+    };
+    await updateMemoryWithChatMessage(userChatMessage);
+
+    try {
+      setIsLoading(true);
+      
+      // Get memory-enhanced context for better responses
+      const memoryContext = await getMemoryEnhancedContext(userChatMessage.content);
+      setMemoryContext(memoryContext);
+
+      // Create the messages array for the LLM
+      const chatMessages: ChatMessage[] = [
+        { role: "system", content: generateSystemPromptEnhancement(memoryContext) },
+        ...messages.map(msg => ({
+          role: msg.isUser ? "user" : "assistant",
+          content: msg.text,
+        })),
+        { role: "user", content: userMessage.text },
+      ];
+
+      const response = await llmClientRef.current.chat(chatMessages, {
+        temperature: llmSettings.temperature || 0.7,
+        maxTokens: llmSettings.maxTokens || 1000,
+      });
+
+      if (response.content) {
+        const assistantMessage: Message = {
+          text: response.content,
+          isUser: false,
+          id: generateId(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Store in memory
+        const assistantChatMessage: MemoryChatMessage = {
+          role: "assistant",
+          content: response.content,
+        };
+        await updateMemoryWithChatMessage(assistantChatMessage);
+
+        // Handle voice output
+        handleVoiceOutput(response.content);
+      } else if (response.error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: `Error: ${response.error}`,
+            isUser: false,
+            id: generateId(),
+          },
+        ]);
+      }
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Error: ${error.message || "Unknown error"}`,
+          isUser: false,
+          id: generateId(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    
+    // Show suggestions based on input
+    if (e.target.value.length > 0) {
+      setShowSuggestions(true);
+      setPredictiveSuggestions(predictiveText.filter(text => 
+        text.toLowerCase().includes(e.target.value.toLowerCase())
+      ).slice(0, 3));
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle key press events
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    sendMessage();
+  };
+
+  // Handle predictive text suggestion
+  const usePredictiveTextSuggestion = (text: string) => {
+    setInput((prev) => `${prev}${text.slice(prev.length)} `);
+  };
+
+  // Download chat history
+  const downloadChatHistory = () => {
+    const history = messages.map((msg) => 
+      `${msg.isUser ? 'You' : 'Assistant'}: ${msg.text}`
+    ).join('\n\n');
+    
+    const blob = new Blob([history], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `melani-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle voice button class
+  const getVoiceButtonClass = () => {
+    if (voiceState === 'listening') {
+      return 'bg-red-500 hover:bg-red-600 animate-pulse';
+    } else if (voiceState === 'processing') {
+      return 'bg-yellow-500 hover:bg-yellow-600';
+    }
+    return 'bg-white/10 hover:bg-white/20';
+  };
+
+  // Get voice icon based on state
+  const VoiceIcon = () => {
+    if (voiceState === 'listening' || voiceState === 'processing') {
+      return <MicOff className="h-4 w-4" />;
+    }
+    return <Mic className="h-4 w-4" />;
+  };
+
+  // Get provider display name
+  const getProviderDisplayName = () => {
+    if (llmSettings.provider === 'gemini') {
+      return 'Gemini';
+    } else if (llmSettings.provider === 'ollama') {
+      return `Ollama (${llmSettings.ollamaModel || 'default'})`;
+    }
+    return llmSettings.provider;
+  };
+
+  // Handle voice toggle
+  const handleVoiceToggle = () => {
+    toggleVoiceInput();
+  };
+
+  // Handle send button click
+  const handleSend = () => {
+    sendMessage();
+  };
+
+  // Initialize on mount
+  React.useEffect(() => {
+    initializeLLM();
+    initializeVoiceService();
+    
+    return () => {
+      llmClientRef.current.dispose();
+      voiceServiceRef.current.dispose();
+    };
+  }, []);
+
+  // Render component
+  return (
+    <Card className="w-full h-full flex flex-col overflow-hidden bg-gradient-to-b from-black/80 to-gray-900/80 border-white/10">
+      <CardHeader className="border-b border-white/10 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Bot className="h-5 w-5 text-blue-400" />
+            <CardTitle className="text-lg font-medium text-white">Melani Assistant</CardTitle>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={downloadChatHistory}
+              title="Download chat history"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Memory-enhanced context"
+              disabled={!memoryContext}
+            >
+              <Brain className="h-4 w-4" />
+            </Button>
+            {voiceSettings.autoSpeak && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Voice output enabled"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            )}
+            <span className="text-xs text-white/60 ml-2">
+              {getProviderDisplayName()}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col">
+        {!isModelLoaded && loadingProgress && (
+          <div className="mb-4 p-3 bg-blue-500/20 rounded-lg">
+            <div className="text-sm text-blue-200">{loadingProgress}</div>
+          </div>
+        )}
+        
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
+            >
+              <div
+                className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  message.isUser
+                    ? 'bg-white/10 text-white'
+                    : 'bg-black/30 text-white'
+                }`}
+              >
+                {message.text}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="bg-black/30 text-white rounded-lg px-4 py-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="relative">
+          {/* Predictive suggestions */}
+          {predictiveSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-black/80 rounded-lg border border-white/20 max-h-32 overflow-y-auto">
+              {predictiveSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <Lightbulb className="w-3 h-3" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex space-x-2">
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={
+                voiceState === 'listening' ? "Listening..." :
+                voiceState === 'processing' ? "Processing..." :
+                isModelLoaded ? "Type your message..." : "Loading model..."
+              }
+              className="glass-effect"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+              onKeyPress={handleKeyPress}
+              onFocus={() => input.length > 1 && setShowSuggestions(true)}
+            />
+            
+            {isVoiceInputEnabled && voiceServiceRef.current?.isSupported() && (
+              <Button
+                onClick={handleVoiceToggle}
+                className={getVoiceButtonClass()}
+                disabled={!isModelLoaded || isLoading}
+                title={
+                  voiceState === 'listening' ? "Stop listening" :
+                  voiceState === 'processing' ? "Processing..." :
+                  "Start voice input"
+                }
+              >
+                <VoiceIcon />
+              </Button>
+            )}
+            
+            <Button
+              onClick={handleSend}
+              className="bg-white/10 hover:bg-white/20"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default MelaniAssistant;
 // Voice state enum
 type VoiceStateType = 'idle' | 'listening' | 'processing';
 
@@ -1204,8 +2011,407 @@ const MelaniAssistant: React.FC = () => {
   );
 };
 
-export default MelaniAssistant;
+  // Custom hooks
+  const systemMemory = useSystemMemory();
+  const voiceSettings = useVoiceSettings();
+  const llmSettings = useLLMSettings();
+  const { suggestions, setSuggestions } = useSmartSuggestions();
+  const { predictiveText, setPredictiveText } = usePredictiveText();
+  const { addMemory } = useMemoryStore();
 
+  // Initialize LLM
+  const initializeLLM = async () => {
+    try {
+      setIsLoading(true);
+      systemMemory.addProcess?.("LLM Initialization");
+      await llmClientRef.current.initialize({
+        provider: llmSettings.provider,
+        ollamaModel: llmSettings.ollamaModel,
+        progressCallback: (progress) => setLoadingProgress(progress),
+      });
+      setIsModelLoaded(true);
+    } catch (error: any) {
+      setLoadingProgress(`Error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+      systemMemory.removeProcess?.("LLM Initialization");
+    }
+  };
+
+  // Initialize voice service
+  const initializeVoiceService = async () => {
+    try {
+      voiceServiceRef.current.onSpeechResult = (text) => {
+        setInput(text);
+        // Auto-send if enabled
+        if (voiceSettings.autoSpeak) {
+          setTimeout(() => {
+            if (text.trim().length > 0) {
+              sendMessage();
+            }
+          }, 500);
+        }
+      };
+
+      voiceServiceRef.current.onStateChange = (state) => {
+        setVoiceState(state);
+      };
+
+      await voiceServiceRef.current.initialize();
+      setIsVoiceInputEnabled(voiceSettings.enabled);
+    } catch (error) {
+      console.error("Failed to initialize voice service:", error);
+    }
+  };
+
+  // Toggle voice input
+  const toggleVoiceInput = () => {
+    if (voiceState === 'listening') {
+      voiceServiceRef.current.stopListening();
+    } else {
+      voiceServiceRef.current.startListening();
+    }
+  };
+
+  // Handle voice output
+  const handleVoiceOutput = async (text: string) => {
+    if (voiceSettings.autoSpeak && text.trim()) {
+      try {
+        await voiceServiceRef.current.speak(text, voiceSettings.voice);
+      } catch (error) {
+        console.error("Voice output error:", error);
+      }
+    }
+  };
+
+  // Send message
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      text: input.trim(),
+      isUser: true,
+      id: generateId(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setShowSuggestions(false);
+
+    // Update memory context with user message
+    const userChatMessage: MemoryChatMessage = {
+      role: "user",
+      content: input,
+    };
+    await updateMemoryWithChatMessage(userChatMessage);
+
+    try {
+      setIsLoading(true);
+      
+      // Get memory-enhanced context for better responses
+      const memoryContext = await getMemoryEnhancedContext(userChatMessage.content);
+      setMemoryContext(memoryContext);
+
+      // Create the messages array for the LLM
+      const chatMessages: ChatMessage[] = [
+        { role: "system", content: generateSystemPromptEnhancement(memoryContext) },
+        ...messages.map(msg => ({
+          role: msg.isUser ? "user" : "assistant",
+          content: msg.text,
+        })),
+        { role: "user", content: userMessage.text },
+      ];
+
+      const response = await llmClientRef.current.chat(chatMessages, {
+        temperature: llmSettings.temperature || 0.7,
+        maxTokens: llmSettings.maxTokens || 1000,
+      });
+
+      if (response.content) {
+        const assistantMessage: Message = {
+          text: response.content,
+          isUser: false,
+          id: generateId(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Store in memory
+        const assistantChatMessage: MemoryChatMessage = {
+          role: "assistant",
+          content: response.content,
+        };
+        await updateMemoryWithChatMessage(assistantChatMessage);
+
+        // Handle voice output
+        handleVoiceOutput(response.content);
+      } else if (response.error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: `Error: ${response.error}`,
+            isUser: false,
+            id: generateId(),
+          },
+        ]);
+      }
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Error: ${error.message || "Unknown error"}`,
+          isUser: false,
+          id: generateId(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    
+    // Show suggestions based on input
+    if (e.target.value.length > 0) {
+      setShowSuggestions(true);
+      setPredictiveSuggestions(predictiveText.filter(text => 
+        text.toLowerCase().includes(e.target.value.toLowerCase())
+      ).slice(0, 3));
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle key press events
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    sendMessage();
+  };
+
+  // Handle predictive text suggestion
+  const usePredictiveTextSuggestion = (text: string) => {
+    setInput((prev) => `${prev}${text.slice(prev.length)} `);
+  };
+
+  // Download chat history
+  const downloadChatHistory = () => {
+    const history = messages.map((msg) => 
+      `${msg.isUser ? 'You' : 'Assistant'}: ${msg.text}`
+    ).join('\n\n');
+    
+    const blob = new Blob([history], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `melani-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle voice button class
+  const getVoiceButtonClass = () => {
+    if (voiceState === 'listening') {
+      return 'bg-red-500 hover:bg-red-600 animate-pulse';
+    } else if (voiceState === 'processing') {
+      return 'bg-yellow-500 hover:bg-yellow-600';
+    }
+    return 'bg-white/10 hover:bg-white/20';
+  };
+
+  // Get voice icon based on state
+  const VoiceIcon = () => {
+    if (voiceState === 'listening' || voiceState === 'processing') {
+      return <MicOff className="h-4 w-4" />;
+    }
+    return <Mic className="h-4 w-4" />;
+  };
+
+  // Get provider display name
+  const getProviderDisplayName = () => {
+    if (llmSettings.provider === 'gemini') {
+      return 'Gemini';
+    } else if (llmSettings.provider === 'ollama') {
+      return `Ollama (${llmSettings.ollamaModel || 'default'})`;
+    }
+    return llmSettings.provider;
+  };
+
+  // Handle voice toggle
+  const handleVoiceToggle = () => {
+    toggleVoiceInput();
+  };
+
+  // Handle send button click
+  const handleSend = () => {
+    sendMessage();
+  };
+
+  // Initialize on mount
+  React.useEffect(() => {
+    initializeLLM();
+    initializeVoiceService();
+    
+    return () => {
+      llmClientRef.current.dispose();
+      voiceServiceRef.current.dispose();
+    };
+  }, []);
+
+  // Render component
+  return (
+    <Card className="w-full h-full flex flex-col overflow-hidden bg-gradient-to-b from-black/80 to-gray-900/80 border-white/10">
+      <CardHeader className="border-b border-white/10 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Bot className="h-5 w-5 text-blue-400" />
+            <CardTitle className="text-lg font-medium text-white">Melani Assistant</CardTitle>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={downloadChatHistory}
+              title="Download chat history"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Memory-enhanced context"
+              disabled={!memoryContext}
+            >
+              <Brain className="h-4 w-4" />
+            </Button>
+            {voiceSettings.autoSpeak && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Voice output enabled"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            )}
+            <span className="text-xs text-white/60 ml-2">
+              {getProviderDisplayName()}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col">
+        {!isModelLoaded && loadingProgress && (
+          <div className="mb-4 p-3 bg-blue-500/20 rounded-lg">
+            <div className="text-sm text-blue-200">{loadingProgress}</div>
+          </div>
+        )}
+        
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
+            >
+              <div
+                className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  message.isUser
+                    ? 'bg-white/10 text-white'
+                    : 'bg-black/30 text-white'
+                }`}
+              >
+                {message.text}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="bg-black/30 text-white rounded-lg px-4 py-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="relative">
+          {/* Predictive suggestions */}
+          {predictiveSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-black/80 rounded-lg border border-white/20 max-h-32 overflow-y-auto">
+              {predictiveSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <Lightbulb className="w-3 h-3" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex space-x-2">
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={
+                voiceState === 'listening' ? "Listening..." :
+                voiceState === 'processing' ? "Processing..." :
+                isModelLoaded ? "Type your message..." : "Loading model..."
+              }
+              className="glass-effect"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+              onKeyPress={handleKeyPress}
+              onFocus={() => input.length > 1 && setShowSuggestions(true)}
+            />
+            
+            {isVoiceInputEnabled && voiceServiceRef.current?.isSupported() && (
+              <Button
+                onClick={handleVoiceToggle}
+                className={getVoiceButtonClass()}
+                disabled={!isModelLoaded || isLoading}
+                title={
+                  voiceState === 'listening' ? "Stop listening" :
+                  voiceState === 'processing' ? "Processing..." :
+                  "Start voice input"
+                }
+              >
+                <VoiceIcon />
+              </Button>
+            )}
+            
+            <Button
+              onClick={handleSend}
+              className="bg-white/10 hover:bg-white/20"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default MelaniAssistant;
 interface MessageProps {
   text: string;
   isUser: boolean;
@@ -1597,8 +2803,407 @@ const MelaniAssistant: React.FC = () => {
   );
 };
 
-export default MelaniAssistant;
+  // Custom hooks
+  const systemMemory = useSystemMemory();
+  const voiceSettings = useVoiceSettings();
+  const llmSettings = useLLMSettings();
+  const { suggestions, setSuggestions } = useSmartSuggestions();
+  const { predictiveText, setPredictiveText } = usePredictiveText();
+  const { addMemory } = useMemoryStore();
 
+  // Initialize LLM
+  const initializeLLM = async () => {
+    try {
+      setIsLoading(true);
+      systemMemory.addProcess?.("LLM Initialization");
+      await llmClientRef.current.initialize({
+        provider: llmSettings.provider,
+        ollamaModel: llmSettings.ollamaModel,
+        progressCallback: (progress) => setLoadingProgress(progress),
+      });
+      setIsModelLoaded(true);
+    } catch (error: any) {
+      setLoadingProgress(`Error: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+      systemMemory.removeProcess?.("LLM Initialization");
+    }
+  };
+
+  // Initialize voice service
+  const initializeVoiceService = async () => {
+    try {
+      voiceServiceRef.current.onSpeechResult = (text) => {
+        setInput(text);
+        // Auto-send if enabled
+        if (voiceSettings.autoSpeak) {
+          setTimeout(() => {
+            if (text.trim().length > 0) {
+              sendMessage();
+            }
+          }, 500);
+        }
+      };
+
+      voiceServiceRef.current.onStateChange = (state) => {
+        setVoiceState(state);
+      };
+
+      await voiceServiceRef.current.initialize();
+      setIsVoiceInputEnabled(voiceSettings.enabled);
+    } catch (error) {
+      console.error("Failed to initialize voice service:", error);
+    }
+  };
+
+  // Toggle voice input
+  const toggleVoiceInput = () => {
+    if (voiceState === 'listening') {
+      voiceServiceRef.current.stopListening();
+    } else {
+      voiceServiceRef.current.startListening();
+    }
+  };
+
+  // Handle voice output
+  const handleVoiceOutput = async (text: string) => {
+    if (voiceSettings.autoSpeak && text.trim()) {
+      try {
+        await voiceServiceRef.current.speak(text, voiceSettings.voice);
+      } catch (error) {
+        console.error("Voice output error:", error);
+      }
+    }
+  };
+
+  // Send message
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      text: input.trim(),
+      isUser: true,
+      id: generateId(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setShowSuggestions(false);
+
+    // Update memory context with user message
+    const userChatMessage: MemoryChatMessage = {
+      role: "user",
+      content: input,
+    };
+    await updateMemoryWithChatMessage(userChatMessage);
+
+    try {
+      setIsLoading(true);
+      
+      // Get memory-enhanced context for better responses
+      const memoryContext = await getMemoryEnhancedContext(userChatMessage.content);
+      setMemoryContext(memoryContext);
+
+      // Create the messages array for the LLM
+      const chatMessages: ChatMessage[] = [
+        { role: "system", content: generateSystemPromptEnhancement(memoryContext) },
+        ...messages.map(msg => ({
+          role: msg.isUser ? "user" : "assistant",
+          content: msg.text,
+        })),
+        { role: "user", content: userMessage.text },
+      ];
+
+      const response = await llmClientRef.current.chat(chatMessages, {
+        temperature: llmSettings.temperature || 0.7,
+        maxTokens: llmSettings.maxTokens || 1000,
+      });
+
+      if (response.content) {
+        const assistantMessage: Message = {
+          text: response.content,
+          isUser: false,
+          id: generateId(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Store in memory
+        const assistantChatMessage: MemoryChatMessage = {
+          role: "assistant",
+          content: response.content,
+        };
+        await updateMemoryWithChatMessage(assistantChatMessage);
+
+        // Handle voice output
+        handleVoiceOutput(response.content);
+      } else if (response.error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: `Error: ${response.error}`,
+            isUser: false,
+            id: generateId(),
+          },
+        ]);
+      }
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: `Error: ${error.message || "Unknown error"}`,
+          isUser: false,
+          id: generateId(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    
+    // Show suggestions based on input
+    if (e.target.value.length > 0) {
+      setShowSuggestions(true);
+      setPredictiveSuggestions(predictiveText.filter(text => 
+        text.toLowerCase().includes(e.target.value.toLowerCase())
+      ).slice(0, 3));
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle key press events
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    sendMessage();
+  };
+
+  // Handle predictive text suggestion
+  const usePredictiveTextSuggestion = (text: string) => {
+    setInput((prev) => `${prev}${text.slice(prev.length)} `);
+  };
+
+  // Download chat history
+  const downloadChatHistory = () => {
+    const history = messages.map((msg) => 
+      `${msg.isUser ? 'You' : 'Assistant'}: ${msg.text}`
+    ).join('\n\n');
+    
+    const blob = new Blob([history], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `melani-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle voice button class
+  const getVoiceButtonClass = () => {
+    if (voiceState === 'listening') {
+      return 'bg-red-500 hover:bg-red-600 animate-pulse';
+    } else if (voiceState === 'processing') {
+      return 'bg-yellow-500 hover:bg-yellow-600';
+    }
+    return 'bg-white/10 hover:bg-white/20';
+  };
+
+  // Get voice icon based on state
+  const VoiceIcon = () => {
+    if (voiceState === 'listening' || voiceState === 'processing') {
+      return <MicOff className="h-4 w-4" />;
+    }
+    return <Mic className="h-4 w-4" />;
+  };
+
+  // Get provider display name
+  const getProviderDisplayName = () => {
+    if (llmSettings.provider === 'gemini') {
+      return 'Gemini';
+    } else if (llmSettings.provider === 'ollama') {
+      return `Ollama (${llmSettings.ollamaModel || 'default'})`;
+    }
+    return llmSettings.provider;
+  };
+
+  // Handle voice toggle
+  const handleVoiceToggle = () => {
+    toggleVoiceInput();
+  };
+
+  // Handle send button click
+  const handleSend = () => {
+    sendMessage();
+  };
+
+  // Initialize on mount
+  React.useEffect(() => {
+    initializeLLM();
+    initializeVoiceService();
+    
+    return () => {
+      llmClientRef.current.dispose();
+      voiceServiceRef.current.dispose();
+    };
+  }, []);
+
+  // Render component
+  return (
+    <Card className="w-full h-full flex flex-col overflow-hidden bg-gradient-to-b from-black/80 to-gray-900/80 border-white/10">
+      <CardHeader className="border-b border-white/10 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Bot className="h-5 w-5 text-blue-400" />
+            <CardTitle className="text-lg font-medium text-white">Melani Assistant</CardTitle>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={downloadChatHistory}
+              title="Download chat history"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title="Memory-enhanced context"
+              disabled={!memoryContext}
+            >
+              <Brain className="h-4 w-4" />
+            </Button>
+            {voiceSettings.autoSpeak && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Voice output enabled"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            )}
+            <span className="text-xs text-white/60 ml-2">
+              {getProviderDisplayName()}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col">
+        {!isModelLoaded && loadingProgress && (
+          <div className="mb-4 p-3 bg-blue-500/20 rounded-lg">
+            <div className="text-sm text-blue-200">{loadingProgress}</div>
+          </div>
+        )}
+        
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
+            >
+              <div
+                className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  message.isUser
+                    ? 'bg-white/10 text-white'
+                    : 'bg-black/30 text-white'
+                }`}
+              >
+                {message.text}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="bg-black/30 text-white rounded-lg px-4 py-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="relative">
+          {/* Predictive suggestions */}
+          {predictiveSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-black/80 rounded-lg border border-white/20 max-h-32 overflow-y-auto">
+              {predictiveSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  <Lightbulb className="w-3 h-3" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex space-x-2">
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={
+                voiceState === 'listening' ? "Listening..." :
+                voiceState === 'processing' ? "Processing..." :
+                isModelLoaded ? "Type your message..." : "Loading model..."
+              }
+              className="glass-effect"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+              onKeyPress={handleKeyPress}
+              onFocus={() => input.length > 1 && setShowSuggestions(true)}
+            />
+            
+            {isVoiceInputEnabled && voiceServiceRef.current?.isSupported() && (
+              <Button
+                onClick={handleVoiceToggle}
+                className={getVoiceButtonClass()}
+                disabled={!isModelLoaded || isLoading}
+                title={
+                  voiceState === 'listening' ? "Stop listening" :
+                  voiceState === 'processing' ? "Processing..." :
+                  "Start voice input"
+                }
+              >
+                <VoiceIcon />
+              </Button>
+            )}
+            
+            <Button
+              onClick={handleSend}
+              className="bg-white/10 hover:bg-white/20"
+              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default MelaniAssistant;
 
 // Using a simple UUID function since we may not have uuid package with types
 const generateId = (): string => {
