@@ -17,7 +17,7 @@ interface LLMSettings {
 export const useLLMSettings = create<LLMSettings>()(
   persist(
     (set) => ({
-      provider: 'webllm',
+      provider: 'gemini',
       geminiApiKey: '',
       ollamaUrl: 'http://localhost:11434',
       ollamaModel: 'llama2',

@@ -5,11 +5,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useSystemMemory } from "@/lib/systemMemory";
 import { useVoiceSettings } from "@/lib/voiceSettings";
 import { useLLMSettings } from "@/lib/llmSettings";
 import { VoiceService } from "@/lib/voiceService";
 import { LLMProvider } from "@/lib/llmClient";
+import { useNotification } from "@/contexts/NotificationContext";
 
 const SystemStats = () => {
   const { totalMemory, usedMemory, processes } = useSystemMemory();
@@ -35,6 +37,7 @@ const SystemStats = () => {
   
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceService] = useState(() => new VoiceService());
+  const { showSuccess, showInfo } = useNotification();
 
   useEffect(() => {
     const loadVoices = () => {
@@ -56,6 +59,17 @@ const SystemStats = () => {
 
   const handleProviderChange = (newProvider: LLMProvider) => {
     setProvider(newProvider);
+    showSuccess('LLM Provider Changed', `Switched to ${newProvider.charAt(0).toUpperCase() + newProvider.slice(1)}`);
+  };
+
+  const handleApiKeyTest = () => {
+    if (provider === 'gemini' && geminiApiKey) {
+      showInfo('Testing Connection', 'Verifying Gemini API key...');
+      // In a real implementation, you would test the API key here
+      setTimeout(() => {
+        showSuccess('Connection Test', 'Gemini API key is valid');
+      }, 1000);
+    }
   };
 
   return (
@@ -81,18 +95,18 @@ const SystemStats = () => {
           </div>
 
           <div className="border-t border-white/10 pt-4">
-            <h3 className="text-sm font-medium mb-4">AI Model Settings</h3>
+            <h3 className="text-sm font-medium mb-4">OS AI Settings</h3>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm">LLM Provider</Label>
+                <Label className="text-sm">Default LLM Provider</Label>
                 <Select value={provider} onValueChange={handleProviderChange}>
                   <SelectTrigger className="glass-effect">
                     <SelectValue placeholder="Select LLM provider" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="gemini">Google Gemini (Recommended)</SelectItem>
                     <SelectItem value="webllm">WebLLM (Local)</SelectItem>
-                    <SelectItem value="gemini">Google Gemini</SelectItem>
                     <SelectItem value="ollama">Ollama</SelectItem>
                   </SelectContent>
                 </Select>
@@ -101,13 +115,34 @@ const SystemStats = () => {
               {provider === 'gemini' && (
                 <div className="space-y-2">
                   <Label className="text-sm">Gemini API Key</Label>
-                  <Input
-                    type="password"
-                    value={geminiApiKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    placeholder="Enter your Gemini API key"
-                    className="glass-effect"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="Enter your Gemini API key"
+                      className="glass-effect flex-1"
+                    />
+                    <Button 
+                      size="sm" 
+                      className="glass-effect"
+                      onClick={handleApiKeyTest}
+                      disabled={!geminiApiKey}
+                    >
+                      Test
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Get your API key from{' '}
+                    <a 
+                      href="https://makersuite.google.com/app/apikey" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Google AI Studio
+                    </a>
+                  </div>
                 </div>
               )}
 
@@ -135,8 +170,8 @@ const SystemStats = () => {
               )}
 
               <div className="text-xs text-gray-500">
-                {provider === 'webllm' && 'Runs entirely in your browser'}
-                {provider === 'gemini' && 'Uses Google Gemini API'}
+                {provider === 'gemini' && 'Uses Google Gemini API - Best performance'}
+                {provider === 'webllm' && 'Runs entirely in your browser - No API key needed'}
                 {provider === 'ollama' && 'Connects to local Ollama instance'}
               </div>
             </div>

@@ -2,6 +2,8 @@
 import { VoiceCommandService } from './voiceCommands';
 import { useSmartSuggestions } from './smartSuggestions';
 import { usePredictiveText } from './predictiveText';
+import { useLLMSettings } from './llmSettings';
+import { LLMClient, ChatMessage } from './llmClient';
 
 export interface AISystemContext {
   currentTime: Date;
@@ -16,9 +18,28 @@ export class AIIntegrationService {
   private voiceCommandService: VoiceCommandService;
   private isInitialized = false;
   private contextUpdateCallback: (context: AISystemContext) => void = () => {};
+  private llmClient: LLMClient | null = null;
 
   constructor() {
     this.voiceCommandService = new VoiceCommandService();
+    this.initializeLLM();
+  }
+
+  private async initializeLLM() {
+    const { provider, geminiApiKey, ollamaUrl, ollamaModel } = useLLMSettings.getState();
+    
+    this.llmClient = new LLMClient({
+      provider,
+      apiKey: geminiApiKey,
+      ollamaUrl,
+      model: ollamaModel,
+    });
+
+    await this.llmClient.initialize();
+  }
+
+  public async reinitializeLLM() {
+    await this.initializeLLM();
   }
 
   public initialize(onCommand: (command: string) => void) {
@@ -113,5 +134,26 @@ export class AIIntegrationService {
   public addPhraseToLearning(phrase: string) {
     const { addPhrase } = usePredictiveText.getState();
     addPhrase(phrase);
+  }
+
+  public async processAIQuery(message: string): Promise<string> {
+    if (!this.llmClient) {
+      await this.initializeLLM();
+    }
+
+    if (!this.llmClient) {
+      return "AI assistant is not available. Please check your LLM settings.";
+    }
+
+    const context = this.getCurrentContext();
+    const systemPrompt = `You are the OS AI assistant. Keep responses brief and helpful. Current context: ${context.timeOfDay} on ${context.dayOfWeek}, active apps: ${context.activeWindows.join(', ')}`;
+
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: message }
+    ];
+
+    const response = await this.llmClient.chat(messages, { temperature: 0.7, maxTokens: 150 });
+    return response.content || response.error || "I couldn't process that request.";
   }
 }
