@@ -860,7 +860,7 @@ const MelaniAssistant: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [isVoiceInputEnabled, setIsVoiceInputEnabled] = React.useState<boolean>(false);
   const [isModelLoaded, setIsModelLoaded] = React.useState<boolean>(false);
-  const [loadingProgress, setLoadingProgress] = React.useState<string | number>("");
+  const [loadingProgress, setLoadingProgress] = React.useState<string>("");
   const [voiceState, setVoiceState] = React.useState<VoiceStateType>("idle");
   const [memoryContext, setMemoryContext] = React.useState<string>("");
   const [showSuggestions, setShowSuggestions] = React.useState<boolean>(false);
