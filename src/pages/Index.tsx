@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import SystemBar from '@/components/SystemBar';
 import Dock from '@/components/Dock';
@@ -14,25 +13,23 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { useUser } from '@/contexts/UserContext';
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 import { useWindowStates } from '@/hooks/useWindowStates';
-import { useSmartSuggestions } from '@/lib/smartSuggestions';
-import { VoiceCommandService } from '@/lib/voiceCommands';
+import { AIIntegrationService } from '@/lib/aiIntegration';
 
 const Index = () => {
   const [timeOfDay, setTimeOfDay] = useState('morning');
   const [isMobile, setIsMobile] = useState(false);
-  const [voiceCommandService, setVoiceCommandService] = useState<VoiceCommandService | null>(null);
+  const [aiService, setAiService] = useState<AIIntegrationService | null>(null);
   
   const { currentTheme } = useTheme();
   const { showInfo, showSuccess } = useNotification();
   const { currentUser } = useUser();
   const { windowStates, openWindow, closeWindow, handleIconClick } = useWindowStates();
-  const { addUsage } = useSmartSuggestions();
 
-  // Initialize voice commands
+  // Initialize AI integration service
   useEffect(() => {
-    const vcs = new VoiceCommandService();
-    vcs.onCommand((command) => {
-      console.log('Voice command received:', command);
+    const ai = new AIIntegrationService();
+    ai.initialize((command) => {
+      console.log('AI command received:', command);
       
       if (command.startsWith('open ')) {
         const app = command.replace('open ', '');
@@ -43,12 +40,13 @@ const Index = () => {
           'notes': 'notes',
           'melani': 'melani',
           'calendar': 'calendar',
-          'music': 'music'
+          'music': 'music',
+          'profile': 'profile'
         };
         
         if (appMap[app]) {
           openWindow(appMap[app]);
-          addUsage(appMap[app]);
+          ai.addUsageTracking(appMap[app]);
           showSuccess('Voice Command', `Opening ${app}`);
         }
       } else if (command.startsWith('search ')) {
@@ -57,27 +55,34 @@ const Index = () => {
       } else if (command.startsWith('time ')) {
         const time = command.replace('time ', '');
         showInfo('Current Time', time);
-      } else if (command.startsWith('query ')) {
-        const query = command.replace('query ', '');
+      } else if (command.startsWith('query ') || command === 'melani help') {
+        const query = command.replace('query ', '').replace('melani help', 'help');
         openWindow('melani');
         showInfo('AI Query', `Processing: "${query}"`);
+      } else if (command === 'smart suggestions') {
+        const suggestions = ai.getSmartSuggestions(3);
+        showInfo('Smart Suggestions', `Recommended: ${suggestions.join(', ')}`);
+      } else if (command === 'system status') {
+        showInfo('System Status', 'System running optimally. All services active.');
       }
     });
     
-    setVoiceCommandService(vcs);
+    setAiService(ai);
     
     return () => {
-      vcs.stopListening();
+      ai.stopVoiceListening();
     };
-  }, [openWindow, addUsage, showInfo, showSuccess]);
+  }, [openWindow, showInfo, showSuccess]);
 
-  // Enhanced icon click handler with usage tracking
+  // Enhanced icon click handler with AI integration
   const enhancedIconClick = (iconType: string) => {
     handleIconClick(iconType);
-    addUsage(iconType);
+    if (aiService) {
+      aiService.addUsageTracking(iconType);
+    }
   };
 
-  // Keyboard shortcuts
+  // Enhanced keyboard shortcuts with AI integration
   useKeyboardShortcuts([
     {
       key: 'k',
@@ -105,18 +110,26 @@ const Index = () => {
       description: 'Open file explorer'
     },
     {
+      key: 'p',
+      ctrlKey: true,
+      action: () => openWindow('profile'),
+      description: 'Open profile'
+    },
+    {
       key: 'Escape',
       action: () => closeWindow('search'),
       description: 'Close search'
     },
-    // New voice command shortcut
+    // Enhanced voice command shortcut
     {
       key: 'v',
       ctrlKey: true,
       action: () => {
-        if (voiceCommandService?.isSupported()) {
-          voiceCommandService.startListening();
-          showInfo('Voice Commands', 'Listening for voice commands...');
+        if (aiService?.isVoiceSupported()) {
+          aiService.startVoiceListening();
+          showInfo('Voice Commands', 'Listening for voice commands... Try saying "open settings" or "hey melani"');
+        } else {
+          showInfo('Voice Commands', 'Voice commands not supported in this browser');
         }
       },
       description: 'Start voice commands'
@@ -148,9 +161,9 @@ const Index = () => {
     const resizeListener = () => checkMobile();
     window.addEventListener('resize', resizeListener);
     
-    // Welcome notification with enhanced visual effects
+    // Enhanced welcome notification with AI features
     setTimeout(() => {
-      showInfo('Welcome to Melani OS', `Good ${timeOfDay}, ${currentUser?.name || 'User'}! Your enhanced visual experience is ready! Press Ctrl+V for voice commands.`);
+      showInfo('Welcome to Melani OS', `Good ${timeOfDay}, ${currentUser?.name || 'User'}! Your AI-enhanced experience is ready! Press Ctrl+V for voice commands or ask Melani for help.`);
     }, 1000);
     
     return () => {
@@ -170,7 +183,9 @@ const Index = () => {
       <SmartSuggestions 
         onAppClick={(appType) => {
           openWindow(appType);
-          addUsage(appType);
+          if (aiService) {
+            aiService.addUsageTracking(appType);
+          }
         }}
       />
       

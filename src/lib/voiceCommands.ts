@@ -1,11 +1,10 @@
-
 import { VoiceService } from './voiceService';
 
 interface VoiceCommand {
   trigger: string[];
   action: (params?: string[]) => void;
   description: string;
-  category: 'navigation' | 'apps' | 'system' | 'search';
+  category: 'navigation' | 'apps' | 'system' | 'search' | 'ai';
 }
 
 export class VoiceCommandService {
@@ -51,6 +50,13 @@ export class VoiceCommandService {
     });
 
     this.addCommand({
+      trigger: ['open profile', 'user profile', 'profile'],
+      action: () => this.onCommandCallback('open profile'),
+      description: 'Open user profile',
+      category: 'apps'
+    });
+
+    this.addCommand({
       trigger: ['search for', 'find', 'search'],
       action: (params) => this.onCommandCallback(`search ${params?.join(' ') || ''}`),
       description: 'Search for files and apps',
@@ -64,11 +70,33 @@ export class VoiceCommandService {
       category: 'system'
     });
 
+    // Enhanced Melani commands
     this.addCommand({
       trigger: ['hey melani', 'open melani', 'assistant'],
       action: () => this.onCommandCallback('open melani'),
       description: 'Open AI assistant',
-      category: 'apps'
+      category: 'ai'
+    });
+
+    this.addCommand({
+      trigger: ['melani help', 'what can you do', 'help'],
+      action: () => this.onCommandCallback('melani help'),
+      description: 'Get help from Melani',
+      category: 'ai'
+    });
+
+    this.addCommand({
+      trigger: ['smart suggestions', 'suggest apps', 'recommendations'],
+      action: () => this.onCommandCallback('smart suggestions'),
+      description: 'Get smart app suggestions',
+      category: 'ai'
+    });
+
+    this.addCommand({
+      trigger: ['system status', 'how is my system', 'system info'],
+      action: () => this.onCommandCallback('system status'),
+      description: 'Get system status information',
+      category: 'system'
     });
   }
 

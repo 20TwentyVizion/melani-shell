@@ -1,4 +1,3 @@
-
 import { Palette, User, Bell, Shield, Monitor } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,9 +6,10 @@ import { useNotification } from '@/contexts/NotificationContext';
 
 interface SettingsPanelProps {
   onSystemMonitorClick?: () => void;
+  onProfileClick?: () => void;
 }
 
-const SettingsPanel = ({ onSystemMonitorClick }: SettingsPanelProps) => {
+const SettingsPanel = ({ onSystemMonitorClick, onProfileClick }: SettingsPanelProps) => {
   const { currentTheme, themes, setTheme } = useTheme();
   const { showSuccess, showInfo } = useNotification();
 
@@ -19,8 +19,12 @@ const SettingsPanel = ({ onSystemMonitorClick }: SettingsPanelProps) => {
   };
 
   const handleEditProfile = () => {
-    showInfo('Profile Editor', 'Opening profile settings...');
-    // This would typically open a profile editing modal or navigate to profile page
+    if (onProfileClick) {
+      onProfileClick();
+      showInfo('Profile Editor', 'Opening profile settings...');
+    } else {
+      showInfo('Profile Editor', 'Opening profile settings...');
+    }
   };
 
   const handleSystemMonitor = () => {

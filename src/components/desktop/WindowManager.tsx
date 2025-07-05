@@ -1,4 +1,3 @@
-
 import MovableWindow from '@/components/MovableWindow';
 import MelaniAssistant from '@/components/assistant/MelaniAssistant';
 import RecentApps from '@/components/dashboard/RecentApps';
@@ -42,6 +41,12 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
     }
   };
 
+  const handleProfileClick = () => {
+    if (onOpenWindow) {
+      onOpenWindow('profile');
+    }
+  };
+
   return (
     <>
       {windowStates.showMelani && (
@@ -74,7 +79,10 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
           onClose={() => onCloseWindow('settings')}
           isMobile={isMobile}
         >
-          <SettingsPanel onSystemMonitorClick={handleSystemMonitorClick} />
+          <SettingsPanel 
+            onSystemMonitorClick={handleSystemMonitorClick}
+            onProfileClick={handleProfileClick}
+          />
         </MovableWindow>
       )}
 
