@@ -44,35 +44,78 @@
   }
 }
 
+/* Enhanced Glass Effect */
 .glass-effect {
-  @apply bg-black/30 backdrop-blur-lg border border-white/10;
+  @apply bg-black/20 backdrop-blur-xl border border-white/20;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Enhanced Glass Effect for Cards */
+.glass-card {
+  @apply glass-effect;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Frosted Glass for Windows */
+.frosted-glass {
+  @apply backdrop-blur-2xl border border-white/25;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.12), 
+    rgba(255, 255, 255, 0.06)
+  );
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .dock-item {
-  @apply transition-all duration-200 ease-in-out hover:animate-dock-hover;
+  @apply transition-all duration-300 ease-out hover:scale-110 hover:-translate-y-2;
+  transform-origin: bottom center;
+}
+
+.dock-item:hover {
+  filter: brightness(1.2) saturate(1.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
 .dynamic-bg {
-  @apply fixed inset-0 -z-10 transition-opacity duration-700;
-  background-image: url('https://cdn.leonardo.ai/users/6cd4ea3f-13be-4f8f-8b23-66cb07a2d68b/generations/6e2d59d3-2cf4-4d7a-8484-446785cdfbe0/Leonardo_Kino_XL_A_beautiful_wallpaper_for_a_new_techbased_sle_3.jpg');
+  @apply fixed inset-0 -z-10 transition-all duration-1000 ease-in-out;
   background-size: cover;
   background-position: center;
   opacity: 1;
 }
 
 .movable-window {
-  @apply fixed bg-black/30 backdrop-blur-lg border border-white/10 rounded-lg shadow-xl;
+  @apply fixed frosted-glass rounded-xl shadow-2xl;
   min-width: 320px;
   min-height: 240px;
   /* Mobile-friendly sizing */
   max-width: calc(100vw - 20px);
   max-height: calc(100vh - 80px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.movable-window:hover {
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .window-header {
-  @apply flex items-center justify-between p-3 border-b border-white/10 cursor-move;
+  @apply flex items-center justify-between p-3 border-b border-white/20 cursor-move;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
   /* Touch-friendly header */
   min-height: 48px;
+  backdrop-filter: blur(10px);
 }
 
 .window-controls {
@@ -80,31 +123,38 @@
 }
 
 .window-control-button {
-  @apply w-7 h-7 rounded-full transition-colors flex items-center justify-center;
+  @apply w-7 h-7 rounded-full transition-all duration-200 flex items-center justify-center hover:scale-110;
   /* Larger touch targets */
   min-width: 28px;
   min-height: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .minimize-button {
-  @apply bg-yellow-500 hover:bg-yellow-600;
+  @apply bg-yellow-500 hover:bg-yellow-400 hover:shadow-yellow-500/50;
 }
 
 .maximize-button {
-  @apply bg-green-500 hover:bg-green-600;
+  @apply bg-green-500 hover:bg-green-400 hover:shadow-green-500/50;
 }
 
 .close-button {
-  @apply bg-red-500 hover:bg-red-600;
+  @apply bg-red-500 hover:bg-red-400 hover:shadow-red-500/50;
 }
 
 .desktop-icon {
-  @apply fixed flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 cursor-pointer transition-all;
+  @apply fixed flex flex-col items-center justify-center p-3 rounded-xl glass-effect cursor-pointer transition-all duration-300 hover:scale-105 hover:-translate-y-1;
   width: 90px;
   height: 90px;
   /* Touch-friendly sizing */
   min-width: 80px;
   min-height: 80px;
+  transform-origin: center bottom;
+}
+
+.desktop-icon:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
 }
 
 /* Mobile-specific styles */
@@ -134,6 +184,36 @@
   }
 }
 
+/* Enhanced animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.4); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+.glow-animation {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.shimmer-effect {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
 /* Game-specific mobile styles */
 .game-canvas {
   max-width: 100%;
@@ -146,7 +226,7 @@
 }
 
 .game-control-btn {
-  @apply px-6 py-3 text-lg font-semibold rounded-lg glass-effect border border-white/20 transition-all;
+  @apply px-6 py-3 text-lg font-semibold rounded-lg glass-effect border border-white/20 transition-all duration-200 hover:scale-105;
   min-width: 60px;
   min-height: 60px;
   touch-action: manipulation;
@@ -160,7 +240,7 @@
   overflow: hidden;
 }
 
-/* Animation improvements */
+/* Enhanced keyframes */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -172,6 +252,74 @@
   }
 }
 
+@keyframes scale-up {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.4s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Scroll animations */
+@keyframes scroll-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-fade-in {
+  animation: scroll-fade-in 0.6s ease-out;
 }

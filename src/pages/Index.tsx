@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import SystemBar from '@/components/SystemBar';
 import Dock from '@/components/Dock';
@@ -5,6 +6,9 @@ import DesktopIcons from '@/components/desktop/DesktopIcons';
 import WindowManager from '@/components/desktop/WindowManager';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import SmartSuggestions from '@/components/suggestions/SmartSuggestions';
+import ParticleBackground from '@/components/effects/ParticleBackground';
+import DynamicWallpaper from '@/components/effects/DynamicWallpaper';
+import FluidAnimations from '@/components/effects/FluidAnimations';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useUser } from '@/contexts/UserContext';
@@ -144,9 +148,9 @@ const Index = () => {
     const resizeListener = () => checkMobile();
     window.addEventListener('resize', resizeListener);
     
-    // Welcome notification
+    // Welcome notification with enhanced visual effects
     setTimeout(() => {
-      showInfo('Welcome to Melani OS', `Good ${timeOfDay}, ${currentUser?.name || 'User'}! Your enhanced desktop experience is ready! Press Ctrl+V for voice commands.`);
+      showInfo('Welcome to Melani OS', `Good ${timeOfDay}, ${currentUser?.name || 'User'}! Your enhanced visual experience is ready! Press Ctrl+V for voice commands.`);
     }, 1000);
     
     return () => {
@@ -157,10 +161,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      <div 
-        className="fixed inset-0 -z-10 transition-opacity duration-700 bg-cover bg-center"
-        style={{ backgroundImage: `url(${currentTheme.wallpaper})` }}
-      />
+      <ParticleBackground />
+      <DynamicWallpaper />
+      <FluidAnimations />
       
       <SystemBar onSettingsClick={() => openWindow('settings')} />
       
