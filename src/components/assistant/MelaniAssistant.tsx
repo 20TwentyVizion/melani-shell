@@ -864,7 +864,7 @@ const MelaniAssistant: React.FC = () => {
   const [voiceState, setVoiceState] = React.useState<VoiceStateType>("idle");
   const [memoryContext, setMemoryContext] = React.useState<string>("");
   const [showSuggestions, setShowSuggestions] = React.useState<boolean>(false);
-  const [predictiveSuggestions, setPredictiveSuggestions] = React.useState<string[]>([]);
+  const [predictiveSuggestions, setPredictiveSuggestions] = React.useState<Array<string>>([]);
   const [input, setInput] = React.useState("");
 
   // Refs for LLM client and voice service
@@ -1627,7 +1627,7 @@ const MelaniAssistant: React.FC = () => {
   const [useMemoryContext, setUseMemoryContext] = React.useState<boolean>(true);
   
   // Smart suggestions integration
-  const [predictiveSuggestions, setPredictiveSuggestions] = React.useState<string[]>([]);
+  const [predictiveSuggestions, setPredictiveSuggestions] = React.useState<Array<string>>([]);
   const [voiceInputEnabled, setVoiceInputEnabled] = React.useState<boolean>(true);
   
   // Hooks
