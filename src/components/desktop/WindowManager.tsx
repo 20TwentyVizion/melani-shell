@@ -53,6 +53,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Melani Assistant"
           initialPosition={{ x: isMobile ? 10 : 100, y: isMobile ? 60 : 100 }}
+          initialSize={{ width: 500, height: 600 }}
           onMinimize={() => onCloseWindow('melani')}
           isMobile={isMobile}
         >
@@ -64,6 +65,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Recent Applications"
           initialPosition={{ x: isMobile ? 10 : 500, y: isMobile ? 60 : 100 }}
+          initialSize={{ width: 420, height: 400 }}
           onMinimize={() => onCloseWindow('recent')}
           isMobile={isMobile}
         >
@@ -75,6 +77,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="System Settings"
           initialPosition={{ x: isMobile ? 10 : 300, y: isMobile ? 60 : 200 }}
+          initialSize={{ width: 480, height: 550 }}
           onMinimize={() => onCloseWindow('settings')}
           onClose={() => onCloseWindow('settings')}
           isMobile={isMobile}
@@ -90,6 +93,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="File Explorer"
           initialPosition={{ x: isMobile ? 10 : 200, y: isMobile ? 60 : 150 }}
+          initialSize={{ width: 600, height: 450 }}
           onMinimize={() => onCloseWindow('files')}
           onClose={() => onCloseWindow('files')}
           isMobile={isMobile}
@@ -102,6 +106,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="User Profile"
           initialPosition={{ x: isMobile ? 10 : 400, y: isMobile ? 60 : 150 }}
+          initialSize={{ width: 450, height: 580 }}
           onMinimize={() => onCloseWindow('profile')}
           onClose={() => onCloseWindow('profile')}
           isMobile={isMobile}
@@ -114,6 +119,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Games"
           initialPosition={{ x: isMobile ? 10 : 300, y: isMobile ? 60 : 150 }}
+          initialSize={{ width: 550, height: 500 }}
           onMinimize={() => onCloseWindow('games')}
           onClose={() => onCloseWindow('games')}
           isMobile={isMobile}
@@ -126,6 +132,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Calendar"
           initialPosition={{ x: isMobile ? 10 : 250, y: isMobile ? 60 : 120 }}
+          initialSize={{ width: 580, height: 520 }}
           onMinimize={() => onCloseWindow('calendar')}
           onClose={() => onCloseWindow('calendar')}
           isMobile={isMobile}
@@ -138,6 +145,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Music Player"
           initialPosition={{ x: isMobile ? 10 : 350, y: isMobile ? 60 : 140 }}
+          initialSize={{ width: 400, height: 450 }}
           onMinimize={() => onCloseWindow('music')}
           onClose={() => onCloseWindow('music')}
           isMobile={isMobile}
@@ -150,6 +158,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Notes"
           initialPosition={{ x: isMobile ? 10 : 400, y: isMobile ? 60 : 100 }}
+          initialSize={{ width: 480, height: 550 }}
           onMinimize={() => onCloseWindow('notes')}
           onClose={() => onCloseWindow('notes')}
           isMobile={isMobile}
@@ -162,6 +171,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Calculator"
           initialPosition={{ x: isMobile ? 10 : 450, y: isMobile ? 60 : 200 }}
+          initialSize={{ width: 350, height: 450 }}
           onMinimize={() => onCloseWindow('calculator')}
           onClose={() => onCloseWindow('calculator')}
           isMobile={isMobile}
@@ -174,6 +184,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="Task Manager"
           initialPosition={{ x: isMobile ? 10 : 500, y: isMobile ? 60 : 150 }}
+          initialSize={{ width: 520, height: 500 }}
           onMinimize={() => onCloseWindow('tasks')}
           onClose={() => onCloseWindow('tasks')}
           isMobile={isMobile}
@@ -186,6 +197,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="System Monitor"
           initialPosition={{ x: isMobile ? 10 : 350, y: isMobile ? 60 : 100 }}
+          initialSize={{ width: 600, height: 480 }}
           onMinimize={() => onCloseWindow('systemMonitor')}
           onClose={() => onCloseWindow('systemMonitor')}
           isMobile={isMobile}
@@ -198,6 +210,7 @@ const WindowManager = ({ isMobile, windowStates, onCloseWindow, onOpenWindow }: 
         <MovableWindow
           title="App Store"
           initialPosition={{ x: isMobile ? 10 : 200, y: isMobile ? 60 : 100 }}
+          initialSize={{ width: 650, height: 550 }}
           onMinimize={() => onCloseWindow('appStore')}
           onClose={() => onCloseWindow('appStore')}
           isMobile={isMobile}

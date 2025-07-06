@@ -14,3 +14,9 @@ export function uuidv4(): string {
     return v.toString(16);
   });
 }
+
+/**
+ * Alias for uuidv4 to maintain compatibility with existing code
+ * @returns A UUID v4 string
+ */
+export const generateId = uuidv4;

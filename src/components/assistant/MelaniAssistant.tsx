@@ -1,8 +1,9 @@
-import * as React from "react";
+import React from "react";
+const { useState, useCallback, useEffect, useRef } = React;
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, Mic, MicOff, Volume2, Brain, Lightbulb, Download } from "lucide-react";
+// Using Unicode characters for icons since icon libraries are causing issues
 import { useSystemMemory } from "@/lib/systemMemory";
 import { useVoiceSettings } from "@/lib/voiceSettings";
 import { useLLMSettings } from "@/lib/llmSettings";
@@ -11,14 +12,29 @@ import { usePredictiveText } from "@/lib/predictiveText";
 import { useMemoryStore } from "@/lib/memory";
 import { getMemoryEnhancedContext, generateSystemPromptEnhancement, updateMemoryWithChatMessage } from "@/lib/memory/memoryContextProvider";
 import { ChatMessage as MemoryChatMessage } from "@/lib/memory/types";
+import { useAssistantStore } from "@/lib/stores/assistantStore";
 
 // Define types and interfaces used in the component
 type VoiceStateType = 'idle' | 'listening' | 'processing';
 
+// Define the structure of chat messages
 interface Message {
+  id: string;
   text: string;
   isUser: boolean;
-  id: string;
+  timestamp: number;
+}
+
+// Define AssistantStore interface for TypeScript type checking
+interface AssistantStore {
+  isLoading: boolean;
+  modelLoaded: boolean;
+  messages: Message[];
+  setLoading: (loading: boolean) => void;
+  addMessage: (text: string, isUser: boolean) => void;
+  getCurrentConversation: () => Message[];
+  startNewConversation: () => void;
+  setModelLoadStatus: (status: boolean) => void;
 }
 
 interface LLMConfig {
@@ -27,6 +43,8 @@ interface LLMConfig {
   temperature?: number;
   maxTokens?: number;
   progressCallback?: (progress: string | number) => void;
+  apiKey?: string;
+  modelName?: string;
 }
 
 interface ChatMessage {
@@ -47,11 +65,27 @@ interface VoiceSettings {
   voice?: string;
 }
 
+interface SmartSuggestionsResult {
+  suggestions: string[];
+  setSuggestions: (suggestions: string[]) => void;
+}
+
+interface PredictiveTextResult {
+  predictiveText: string;
+  setPredictiveText: (text: string) => void;
+}
+
+interface MemoryStoreResult {
+  addMemory: (content: string, source: string) => void;
+}
+
 interface LLMSettings {
   provider: string;
   ollamaModel?: string;
   temperature?: number;  // Added for type safety
   maxTokens?: number;    // Added for type safety
+  apiKey?: string;
+  modelName?: string;
 }
 
 interface VoiceServiceInterface {
@@ -71,14 +105,7 @@ interface LLMClientInterface {
   dispose: () => void;
 }
 
-// Simple UUID generator function to replace uuid package dependency
-function generateId(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+// Using generateId from uuidUtil
 
 // Voice service class implementation
 class VoiceService implements VoiceServiceInterface {
@@ -129,46 +156,149 @@ class LLMClient implements LLMClientInterface {
 
 // MelaniAssistant Component
 const MelaniAssistant: React.FC = () => {
-  // State declarations
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [isVoiceInputEnabled, setIsVoiceInputEnabled] = React.useState<boolean>(false);
-  const [isModelLoaded, setIsModelLoaded] = React.useState<boolean>(false);
-  const [loadingProgress, setLoadingProgress] = React.useState<string>("");
-  const [voiceState, setVoiceState] = React.useState<VoiceStateType>("idle");
-  const [memoryContext, setMemoryContext] = React.useState<string>("");
-  const [showSuggestions, setShowSuggestions] = React.useState<boolean>(false);
-  const [predictiveSuggestions, setPredictiveSuggestions] = React.useState<Array<string>>([]);
-  const [input, setInput] = React.useState("");
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  // Local state for UI and fallbacks
+  const [isLoading, setIsLoading] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState("");
+  
+  // Access the store directly - TypeScript-safe approach
+  // This avoids the "not callable" errors
+  const assistantStoreHook = useAssistantStore;
+  const rawStore = typeof assistantStoreHook === 'function' ? assistantStoreHook() : null;
+  
+  // Create TypeScript-safe wrapper functions
+  const setLoading = useCallback((loading: boolean) => {
+    if (rawStore && typeof rawStore.setLoading === 'function') {
+      rawStore.setLoading(loading);
+    } else {
+      setIsLoading(loading); 
+    }
+  }, [rawStore]);
+  
+  const addMessage = useCallback((text: string, isUser: boolean) => {
+    if (rawStore && typeof rawStore.addMessage === 'function') {
+      rawStore.addMessage(text, isUser);
+    } else {
+      console.log('Adding message (fallback):', { text, isUser });
+    }
+  }, [rawStore]);
+  
+  const getCurrentConversation = useCallback(() => {
+    if (rawStore && typeof rawStore.getCurrentConversation === 'function') {
+      return rawStore.getCurrentConversation();
+    } 
+    console.log('Getting conversation (fallback)');
+    return [];
+  }, [rawStore]);
+  
+  const startNewConversation = useCallback(() => {
+    if (rawStore && typeof rawStore.startNewConversation === 'function') {
+      rawStore.startNewConversation();
+    } else {
+      console.log('Starting new conversation (fallback)');
+    }
+  }, [rawStore]);
+  
+  const setModelLoadStatus = useCallback((status: boolean) => {
+    if (rawStore && typeof rawStore.setModelLoadStatus === 'function') {
+      rawStore.setModelLoadStatus(status);
+    } else {
+      console.log('Setting model load status (fallback):', status);
+      setModelLoaded(status);
+    }
+  }, [rawStore]);
+  
+  // Local state that doesn't need persistence
+  const [isVoiceInputEnabled, setIsVoiceInputEnabled] = useState<boolean>(false);
+  const [voiceState, setVoiceState] = useState<VoiceStateType>('idle');
+  const [inputText, setInputText] = useState<string>("");
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [smartResponse, setSmartResponse] = useState<string>("");
+
+  // Get current messages from the store
+  const messages = getCurrentConversation();
+  
+  // For predictive text suggestions
+  const [predictiveSuggestions, setPredictiveSuggestions] = useState<Array<string>>([]);
 
   // Refs for LLM client and voice service
-  const llmClientRef = React.useRef<LLMClientInterface>(new LLMClient());
-  const voiceServiceRef = React.useRef<VoiceServiceInterface>(new VoiceService());
+  const llmClientRef = useRef<LLMClientInterface>(new LLMClient());
+  const voiceServiceRef = useRef<VoiceServiceInterface>(new VoiceService());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Custom hooks
-  const systemMemory = useSystemMemory();
-  const voiceSettings = useVoiceSettings();
-  const llmSettings = useLLMSettings();
-  const { suggestions, setSuggestions } = useSmartSuggestions();
-  const { predictiveText, setPredictiveText } = usePredictiveText();
-  const { addMemory } = useMemoryStore();
+  // Custom hooks with proper type assertions to avoid TypeScript errors
+  const systemMemory = useSystemMemory() as SystemMemory;
+  const voiceSettings = useVoiceSettings() as VoiceSettings;
+  const llmSettings = useLLMSettings() as LLMSettings;
+  
+  // TypeScript interface augmentation for LLM settings
+  interface EnhancedLLMSettings extends LLMSettings {
+    temperature?: number;
+    maxTokens?: number;
+    apiKey?: string;
+    modelName?: string;
+  }
+  const { suggestions, setSuggestions } = useSmartSuggestions() as SmartSuggestionsResult;
+  const { predictiveText, setPredictiveText } = usePredictiveText() as PredictiveTextResult;
+  const { addMemory } = useMemoryStore() as MemoryStoreResult;
 
-  // Initialize LLM
+  // Initialize LLM client
   const initializeLLM = async () => {
     try {
-      setIsLoading(true);
-      systemMemory.addProcess?.("LLM Initialization");
-      await llmClientRef.current.initialize({
-        provider: llmSettings.provider,
-        ollamaModel: llmSettings.ollamaModel,
-        progressCallback: (progress) => setLoadingProgress(progress),
+      setModelLoadStatus(false);
+      setLoadingProgress("Initializing AI model...");
+      
+      const progressCallback = (progress: string | number) => {
+        setLoadingProgress(typeof progress === "number" ? `Loading model... ${Math.round(progress * 100)}%` : String(progress));
+      };
+      
+      // Get LLM settings with safe access - TypeScript-safe approach
+      const defaultSettings: LLMSettings = {
+        provider: 'mock',
+        temperature: 0.7,
+        maxTokens: 2048
+      };
+      
+      // Use the llmSettings already defined at component level (line 218)
+      // Instead of calling hooks inside this function which violates React's Rules of Hooks
+      
+      // Safe access to potentially undefined properties
+      const safeSettings: LLMSettings = {
+        provider: llmSettings?.provider || defaultSettings.provider,
+        ollamaModel: llmSettings?.ollamaModel || 'llama2',
+        temperature: llmSettings?.temperature || defaultSettings.temperature,
+        maxTokens: llmSettings?.maxTokens || defaultSettings.maxTokens,
+        apiKey: llmSettings?.apiKey || '',
+        modelName: llmSettings?.modelName || ''
+      };
+      
+      // Get model configuration safely
+      const provider = safeSettings.provider || 'mock';
+      const ollamaModel = safeSettings.ollamaModel || 'llama2';
+      const isOllama = provider === 'ollama';
+      const isOpenAI = provider === 'openai';
+      
+      // Create LLM client if not already created
+      if (!llmClientRef.current) {
+        llmClientRef.current = createLLMClient(provider);
+      }
+      
+      // Initialize with safe defaults
+      await llmClientRef.current?.initialize({
+        provider,
+        ollamaModel,
+        temperature: llmSettings.temperature || 0.7,
+        maxTokens: llmSettings.maxTokens || 2048,
+        apiKey: llmSettings.apiKey || '',
+        modelName: llmSettings.modelName || '',
+        progressCallback
       });
-      setIsModelLoaded(true);
-    } catch (error: any) {
-      setLoadingProgress(`Error: ${error.message || 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
-      systemMemory.removeProcess?.("LLM Initialization");
+      
+      setModelLoadStatus(true);
+      setLoadingProgress("");
+    } catch (error) {
+      console.error('Failed to initialize LLM:', error);
+      setLoadingProgress(`Error: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -183,14 +313,14 @@ const MelaniAssistant: React.FC = () => {
         voice: voiceSettings.voice,
       });
       setIsVoiceInputEnabled(voiceServiceRef.current.isSupported());
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error initializing voice service:", error);
     }
   };
 
   // Handle speech result
   const handleSpeechResult = (text: string) => {
-    setInput(text);
+    setInputText(text);
     if (text.trim()) {
       setVoiceState('processing');
       handleSend();
@@ -222,26 +352,27 @@ const MelaniAssistant: React.FC = () => {
     return "bg-blue-500 hover:bg-blue-600";
   };
 
-  // Voice icon component
+  // Voice icon component using Unicode emoji
   const VoiceIcon = () => {
     if (voiceState === 'listening') {
-      return <MicOff className="h-4 w-4" />;
+      return <span className="h-4 w-4">🎤</span>; // Microphone emoji
     }
-    return <Mic className="h-4 w-4" />;
+    return <span className="h-4 w-4">🎙️</span>; // Studio microphone emoji
   };
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
+    setInputText(e.target.value);
     
     // Show predictive suggestions when typing
     if (e.target.value.trim().length > 2) {
       // Example of generating predictive suggestions
-      const matchingSuggestions = suggestions.filter(suggestion => 
-        suggestion.toLowerCase().includes(e.target.value.toLowerCase())
-      ).slice(0, 5);
+      const suggestionArray = Array.isArray(suggestions) ? suggestions : [];
+      const filteredSuggestions = suggestionArray
+        .filter(suggestion => suggestion.toLowerCase().includes(e.target.value.toLowerCase()))
+        .slice(0, 3);
       
-      setPredictiveSuggestions(matchingSuggestions);
+      setPredictiveSuggestions(filteredSuggestions);
       setShowSuggestions(true);
     } else {
       setPredictiveSuggestions([]);
@@ -259,100 +390,128 @@ const MelaniAssistant: React.FC = () => {
 
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: string) => {
-    setInput(suggestion);
+    setInputText(suggestion);
     setPredictiveSuggestions([]);
     setShowSuggestions(false);
   };
 
   // Send message
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      text: input.trim(),
+    const userMessage = {
+      id: 'msg-' + Date.now(),
+      text: inputText.trim(),
       isUser: true,
-      id: generateId(),
+      timestamp: Date.now(),
     };
 
-    // Add user message to UI
-    setMessages(prev => [...prev, userMessage]);
+    // Add user message to the store
+    addMessage(userMessage.text, true);
     
     // Clear input and suggestions
-    setInput("");
+    setInputText("");
     setPredictiveSuggestions([]);
     setShowSuggestions(false);
 
     try {
-      setIsLoading(true);
+      setLoading(true);
       
       // Retrieve context from memory
       const contextData = await getMemoryEnhancedContext(userMessage.text);
-      setMemoryContext(contextData || "");
       
+      // Retrieve context from memory with safe access
+      const getMemoryEnhancedContext = async (query: string): Promise<any> => {
+        if (!memoryManager) return {};
+        
+        try {
+          // Safe access with type checking
+          if (typeof memoryManager.getMemoriesForPrompt === 'function') {
+            return await memoryManager.getMemoriesForPrompt(query);
+          }
+          return {};
+        } catch (error) {
+          console.error('Failed to get memory enhanced context:', error);
+          return {};
+        }
+      };
+      
+      // Create system prompt with contextData
+      let contextDataStr = '';
+      if (contextData) {
+        try {
+          contextDataStr = JSON.stringify(contextData);
+        } catch (e) {
+          console.error('Failed to stringify context data:', e);
+        }
+      }
+      const systemPrompt = `You are Melani, an advanced AI assistant. ${contextDataStr}`;
+
       // Create chat messages array for the LLM
       const chatMessages: ChatMessage[] = [
         { 
-          role: 'system', 
-          content: generateSystemPromptEnhancement(contextData)
+          id: 'sys-' + Date.now(),
+          text: systemPrompt,
+          isUser: false,
+          timestamp: Date.now(),
         },
-        ...messages.map(msg => ({
-          role: msg.isUser ? 'user' : 'assistant',
-          content: msg.text
+        ...messages.map(m => ({
+          id: m.id,
+          text: m.text,
+          isUser: m.isUser,
+          timestamp: m.timestamp,
         })),
-        { role: 'user', content: userMessage.text }
+        userMessage
       ];
       
-      // Send to LLM
-      const response = await llmClientRef.current.chat(chatMessages, {
-        temperature: llmSettings.temperature,
-        maxTokens: llmSettings.maxTokens
+      // Send to LLM with defaults
+      const response = await llmClientRef.current?.chat(chatMessages, {
+        temperature: 0.7,
+        maxTokens: 2048
       });
       
-      if (response.content) {
-        const assistantMessage: Message = {
-          text: response.content,
-          isUser: false,
-          id: generateId(),
-        };
+      // LLM callback functions
+      const handleResponse = (response: { content?: string; error?: string }) => {
+        setLoading(false);
         
-        // Add assistant message to UI
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        // Store conversation in memory
-        updateMemoryWithChatMessage({
-          id: userMessage.id,
-          query: userMessage.text,
-          response: response.content,
-          timestamp: new Date().toISOString()
-        } as MemoryChatMessage);
-        
-        // If voice is enabled and set to auto-speak, read response aloud
-        if (voiceSettings.enabled && voiceSettings.autoSpeak) {
-          voiceServiceRef.current.speak(response.content, voiceSettings.voice);
+        if (response.error) {
+          // Handle error
+          console.error('LLM Error:', response.error);
+          return;
         }
-      }
-      
-      if (response.error) {
-        const errorMessage: Message = {
-          text: `Error: ${response.error}`,
-          isUser: false,
-          id: generateId(),
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      }
-    } catch (error: any) {
-      const errorMessage: Message = {
-        text: `Error: ${error.message || 'Unknown error'}`,
-        isUser: false,
-        id: generateId(),
+        
+        if (response.content) {
+          // Add assistant message to the store
+          addMessage(response.content, false);
+          
+          // Auto-speak response if enabled
+          if (voiceSettings.autoSpeak && voiceServiceRef.current) {
+            voiceServiceRef.current.speak(response.content, voiceSettings.voice);
+          }
+          
+          // Update memory with the conversation
+          try {
+            updateMemoryWithChatMessage({
+              id: 'msg-' + Date.now(),
+              content: response.content || '',
+              role: 'assistant',
+              timestamp: Date.now(),
+            });
+          } catch (error) {
+            console.error('Error updating memory with assistant message', error);
+          }
+        }
       };
-      setMessages(prev => [...prev, errorMessage]);
+
+      handleResponse(response);
+    } catch (error) {
+      console.error('Error sending message to LLM:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
       setVoiceState('idle');
     }
   };
-  
+
   // Get provider display name
   const getProviderDisplayName = () => {
     if (llmSettings.provider === 'ollama') {
@@ -360,25 +519,39 @@ const MelaniAssistant: React.FC = () => {
     }
     return llmSettings.provider;
   };
-  
+
   // Initialize on component mount
-  React.useEffect(() => {
-    initializeLLM();
-    initializeVoiceService();
+  useEffect(() => {
+    // Ensure we have a conversation if none exists
+    if (messages.length === 0) {
+      // Start a new conversation with welcome message
+      startNewConversation();
+      addMessage("Hello! I'm Melani, your AI assistant. How can I help you today?", false);
+    }
     
-    // Cleanup on unmount
+    // Initialize components
+    if (!modelLoaded) {
+      initializeLLM();
+    }
+    
+    if (voiceSettings.enabled && !isVoiceInputEnabled) {
+      initializeVoiceService();
+      setIsVoiceInputEnabled(true);
+    }
+    
+    // Cleanup function
     return () => {
       llmClientRef.current.dispose();
       voiceServiceRef.current.dispose();
     };
-  }, []);
+  }, [initializeLLM, initializeVoiceService, modelLoaded, voiceSettings.enabled, messages.length, startNewConversation, addMessage]);
 
   // Main component UI
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden bg-black/50 border-white/20">
       <CardHeader className="p-4 flex-none border-b border-white/10">
         <CardTitle className="flex items-center text-white gap-2 text-lg">
-          <Bot className="w-5 h-5" />
+          <span className="text-blue-400 mr-2">🤖</span>
           <span>Melani Assistant</span>
         </CardTitle>
         <div className="text-xs text-gray-400">
@@ -386,9 +559,9 @@ const MelaniAssistant: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        {!isModelLoaded && loadingProgress && (
+        {!modelLoaded && (
           <div className="mb-4 p-3 bg-blue-500/20 rounded-lg">
-            <div className="text-sm text-blue-200">{loadingProgress}</div>
+            <div className="text-sm text-blue-200">Initializing AI model...</div>
           </div>
         )}
         
@@ -432,7 +605,8 @@ const MelaniAssistant: React.FC = () => {
                   className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2"
                   onClick={() => handleSuggestionClick(suggestion)}
                 >
-                  <Lightbulb className="w-3 h-3" />
+                  <span className="h-5 w-5">➤</span>
+                  <span className="text-yellow-400 mr-1">💡</span>
                   {suggestion}
                 </button>
               ))}
@@ -441,24 +615,23 @@ const MelaniAssistant: React.FC = () => {
           
           <div className="flex space-x-2">
             <Input
-              value={input}
+              value={inputText}
               onChange={handleInputChange}
+              onKeyDown={(e) => e.key === "Enter" && inputText.trim() && handleSend()}
               placeholder={
                 voiceState === 'listening' ? "Listening..." :
                 voiceState === 'processing' ? "Processing..." :
-                isModelLoaded ? "Type your message..." : "Loading model..."
+                (modelLoaded as boolean) ? "Type your message..." : "Loading model..."
               }
               className="glass-effect"
-              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
-              onKeyPress={handleKeyPress}
-              onFocus={() => input.length > 1 && setShowSuggestions(true)}
+              disabled={!modelLoaded || isLoading || voiceState === 'listening'}
             />
             
             {isVoiceInputEnabled && voiceServiceRef.current?.isSupported() && (
               <Button
                 onClick={handleVoiceToggle}
                 className={getVoiceButtonClass()}
-                disabled={!isModelLoaded || isLoading}
+                disabled={!modelLoaded || isLoading}
                 title={
                   voiceState === 'listening' ? "Stop listening" :
                   voiceState === 'processing' ? "Processing..." :
@@ -472,9 +645,9 @@ const MelaniAssistant: React.FC = () => {
             <Button
               onClick={handleSend}
               className="bg-white/10 hover:bg-white/20"
-              disabled={!isModelLoaded || isLoading || voiceState === 'listening'}
+              disabled={!modelLoaded || isLoading || voiceState === 'listening'}
             >
-              <Send className="h-4 w-4" />
+              <span className="h-4 w-4">➤</span>
             </Button>
           </div>
         </div>

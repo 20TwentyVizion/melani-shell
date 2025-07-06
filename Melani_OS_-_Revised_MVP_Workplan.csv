@@ -1,0 +1,11 @@
+Stage,Priority,Task,Details
+Pre-MVP Setup,High,Create MVP Dev Branch from Main,Branch off from main to preserve full-featured build while carving out MVP.
+Pre-MVP Setup,High,Implement Session Restore & White Screen Fallback,"Add fallback UI component, Zustand persistence, and tab visibility rehydration logic."
+Pre-MVP Setup,Medium,Refactor Zustand Stores for Core Apps,"Ensure local state for Notes, Tasks, Assistant is properly persisted and restored."
+Pre-MVP Setup,Medium,Optimize UI for Mobile and Desktop,"Audit spacing, tap areas, overlapping modals, and icon layout for responsiveness."
+Pre-MVP Setup,Optional,Add Service Worker for Offline Fallback,Integrate basic PWA support using vite-plugin-pwa for improved refresh handling.
+MVP Carve-Out,High,Disable Non-Essential Apps,Comment out or disable incomplete or unpolished features not needed in MVP.
+MVP Carve-Out,High,"Polish Core Apps: Assistant, Notes, Tasks",Ensure LLM chat works cleanly; notes and tasks use Zustand with local persistence.
+MVP Carve-Out,Medium,Add Static Smart Suggestions,Rotate 2–3 suggestions based on time-of-day or first load to simulate intelligence.
+MVP Carve-Out,Medium,Optional: Enable Voice Input for Assistant,Allow speech-to-text input via Web Speech API if stable; mark as MVP+ if needed.
+MVP Carve-Out,High,Deploy MVP Branch to Netlify,Use a separate preview domain for MVP-only version to test and pitch cleanly.

@@ -1,78 +1,54 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, Check, Trash2, Calendar, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useTasksStore, getPriorityColor, TaskPriority } from '@/lib/stores/tasksStore';
 
-interface Task {
-  id: string;
-  title: string;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  dueDate?: Date;
-  created: Date;
-}
+// Using Task interface from tasksStore
 
 const TaskManager = () => {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Welcome to Task Manager',
-      completed: false,
-      priority: 'medium',
-      created: new Date()
-    }
-  ]);
+  // Use the persisted Zustand store instead of local state
+  const {
+    tasks,
+    filter,
+    addTask,
+    toggleTask,
+    deleteTask,
+    setPriority,
+    setFilter,
+    getFilteredTasks
+  } = useTasksStore();
+  
   const [newTask, setNewTask] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const { showSuccess } = useNotification();
+  
+  // Get filtered tasks based on current filter
+  const filteredTasks = getFilteredTasks();
 
-  const addTask = () => {
+  const handleAddTask = () => {
     if (newTask.trim()) {
-      const task: Task = {
-        id: Date.now().toString(),
-        title: newTask.trim(),
-        completed: false,
-        priority: 'medium',
-        created: new Date()
-      };
-      setTasks(prev => [task, ...prev]);
+      addTask(newTask);
       setNewTask('');
       showSuccess('Task added', 'New task has been created');
     }
   };
 
-  const toggleTask = (taskId: string) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
+  const handleToggleTask = (taskId: string) => {
+    toggleTask(taskId);
   };
 
-  const deleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  const handleDeleteTask = (taskId: string) => {
+    deleteTask(taskId);
     showSuccess('Task deleted', 'Task has been removed');
   };
 
-  const setPriority = (taskId: string, priority: Task['priority']) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, priority } : task
-    ));
+  const handleSetPriority = (taskId: string, priority: TaskPriority) => {
+    setPriority(taskId, priority);
   };
 
-  const filteredTasks = tasks.filter(task => {
-    if (filter === 'active') return !task.completed;
-    if (filter === 'completed') return task.completed;
-    return true;
-  });
-
-  const getPriorityColor = (priority: Task['priority']) => {
-    switch (priority) {
-      case 'high': return 'text-red-400';
-      case 'medium': return 'text-yellow-400';
-      case 'low': return 'text-green-400';
-    }
-  };
+  // getPriorityColor is now imported from tasksStore
 
   return (
     <div className="w-full h-full p-4">
@@ -80,11 +56,11 @@ const TaskManager = () => {
         <Input
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && addTask()}
+          onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
           placeholder="Add a new task..."
           className="flex-1 glass-effect border-white/20"
         />
-        <Button onClick={addTask} className="glass-effect">
+        <Button onClick={handleAddTask} className="glass-effect">
           <Plus className="w-4 h-4" />
         </Button>
       </div>
@@ -112,7 +88,7 @@ const TaskManager = () => {
             }`}
           >
             <button
-              onClick={() => toggleTask(task.id)}
+              onClick={() => handleToggleTask(task.id)}
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                 task.completed
                   ? 'bg-green-500 border-green-500'
@@ -129,7 +105,7 @@ const TaskManager = () => {
             <div className="flex items-center gap-2">
               <select
                 value={task.priority}
-                onChange={(e) => setPriority(task.id, e.target.value as Task['priority'])}
+                onChange={(e) => handleSetPriority(task.id, e.target.value as TaskPriority)}
                 className="bg-transparent text-sm border border-white/20 rounded px-2 py-1"
               >
                 <option value="low">Low</option>
@@ -139,7 +115,7 @@ const TaskManager = () => {
               <Flag className={`w-4 h-4 ${getPriorityColor(task.priority)}`} />
               <Button
                 size="sm"
-                onClick={() => deleteTask(task.id)}
+                onClick={() => handleDeleteTask(task.id)}
                 variant="destructive"
                 className="glass-effect"
               >

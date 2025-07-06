@@ -1,71 +1,54 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, Save, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useNotesStore, Note } from '@/lib/stores/notesStore';
 
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  created: Date;
-  modified: Date;
-}
+// Using Note interface from notesStore
 
 const NotesApp = () => {
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: '1',
-      title: 'Welcome to Notes',
-      content: 'This is your first note. Start typing to create more!',
-      created: new Date(),
-      modified: new Date()
-    }
-  ]);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(notes[0]);
+  // Use the persisted Zustand store instead of local state
+  const { 
+    notes, 
+    addNote: createNote, 
+    updateNote, 
+    deleteNote, 
+    selectNote, 
+    getSelectedNote,
+    getNotes
+  } = useNotesStore();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const { showSuccess } = useNotification();
+  
+  // Get the current selected note
+  const selectedNote = getSelectedNote();
+  
+  // Filter notes based on search term
+  const filteredNotes = getNotes(searchTerm);
 
-  const filteredNotes = notes.filter(note =>
-    note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const createNote = () => {
-    const newNote: Note = {
-      id: Date.now().toString(),
-      title: 'New Note',
-      content: '',
-      created: new Date(),
-      modified: new Date()
-    };
-    setNotes(prev => [newNote, ...prev]);
-    setSelectedNote(newNote);
+  // Create note function now just calls the store action
+  const handleCreateNote = () => {
+    createNote();
+    showSuccess('Note created', 'New note created successfully');
   };
 
   const saveNote = () => {
     if (!selectedNote) return;
-    setNotes(prev => prev.map(note =>
-      note.id === selectedNote.id
-        ? { ...selectedNote, modified: new Date() }
-        : note
-    ));
     showSuccess('Note saved', 'Your note has been saved successfully');
   };
 
-  const deleteNote = (noteId: string) => {
-    setNotes(prev => prev.filter(note => note.id !== noteId));
-    if (selectedNote?.id === noteId) {
-      setSelectedNote(notes.find(note => note.id !== noteId) || null);
-    }
+  const handleDeleteNote = (noteId: string) => {
+    deleteNote(noteId);
     showSuccess('Note deleted', 'Note has been deleted');
   };
 
   const updateSelectedNote = (field: 'title' | 'content', value: string) => {
     if (!selectedNote) return;
-    setSelectedNote({ ...selectedNote, [field]: value });
+    updateNote(selectedNote.id, { [field]: value });
   };
 
   return (
@@ -81,7 +64,7 @@ const NotesApp = () => {
               className="pl-10 glass-effect border-white/20"
             />
           </div>
-          <Button onClick={createNote} size="sm" className="glass-effect">
+          <Button onClick={handleCreateNote} size="sm" className="glass-effect">
             <Plus className="w-4 h-4" />
           </Button>
         </div>
@@ -93,7 +76,7 @@ const NotesApp = () => {
               className={`p-3 rounded-lg cursor-pointer transition-all ${
                 selectedNote?.id === note.id ? 'bg-blue-500/20' : 'glass-effect hover:bg-white/5'
               }`}
-              onClick={() => setSelectedNote(note)}
+              onClick={() => selectNote(note.id)}
             >
               <div className="font-medium truncate">{note.title}</div>
               <div className="text-sm opacity-70 truncate">{note.content}</div>
@@ -119,7 +102,7 @@ const NotesApp = () => {
                 <Save className="w-4 h-4" />
               </Button>
               <Button
-                onClick={() => deleteNote(selectedNote.id)}
+                onClick={() => handleDeleteNote(selectedNote.id)}
                 variant="destructive"
                 className="glass-effect"
               >
