@@ -7,7 +7,7 @@
  * 3. Long-term: User preferences and insights (IndexedDB)
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { uuidv4 } from '../utils/uuidUtil';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
