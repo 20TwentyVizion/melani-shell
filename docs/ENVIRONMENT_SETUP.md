@@ -1,20 +1,36 @@
-# Environment Setup for Melani OS
+# Melani OS Environment Setup
 
-This guide explains how to set up environment variables for Melani OS development.
+## Quick Start
 
-## Environment Variables
+The app is pre-configured to work immediately with WebLLM (no API key required).
 
-Melani OS uses environment variables to manage configuration settings like API keys and provider defaults. These variables are loaded from a `.env` file at the root of the project.
+### Immediate Setup
+1. **Copy environment file**:
+   ```bash
+   cp .env.example .env
+   ```
 
-### Required Environment Files
+2. **Start the application**:
+   ```bash
+   npm run dev
+   ```
 
-1. `.env` - Contains your actual configuration values (not committed to version control)
-2. `.env.example` - A template showing required variables (committed to version control)
+The app will use WebLLM by default and should run at http://localhost:8080
 
-### Setting Up Your Environment
+## Detailed Configuration
 
-1. Create a `.env` file in the project root (or copy from `.env.example`)
-2. Fill in the required values as described below
+Melani OS uses environment variables to manage LLM providers and API keys.
+
+### Environment Files
+
+1. `.env` - Your actual configuration (not committed to version control)
+2. `.env.example` - Template showing available variables
+
+### Setup Process
+
+1. Create your `.env` file from the template
+2. Choose your preferred LLM provider
+3. Add API keys if needed
 
 ## Available Environment Variables
 
